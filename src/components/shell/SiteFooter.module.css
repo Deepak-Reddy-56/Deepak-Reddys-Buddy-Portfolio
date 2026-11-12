@@ -1,0 +1,28 @@
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: var(--space-6) var(--gutter) var(--space-6);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+
+.links {
+  display: flex;
+  gap: 20px;
+}
+
+.links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .links a:hover {
+    color: var(--color-ink);
+  }
+}

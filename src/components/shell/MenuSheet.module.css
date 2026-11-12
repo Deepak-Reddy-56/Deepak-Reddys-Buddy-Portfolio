@@ -1,0 +1,187 @@
+/* ── Backdrop ─────────────────────────────────────────────── */
+.backdrop {
+  position: fixed;
+  z-index: var(--z-backdrop);
+  inset: 0;
+  background: var(--color-backdrop);
+  animation: fade-in var(--dur-menu-open) var(--ease-out) both;
+}
+
+.backdrop[data-phase='closing'] {
+  animation: fade-out var(--dur-menu-close) var(--ease-in) both;
+}
+
+/* ── Sheet: inset from the viewport, like a window in a window ── */
+.sheet {
+  --inset: 16px;
+  position: fixed;
+  z-index: var(--z-sheet);
+  top: var(--inset);
+  left: var(--inset);
+  bottom: var(--inset);
+  right: calc(var(--inset) + var(--scrollbar-comp));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sheet);
+  transform-origin: 50% 0;
+  animation: sheet-in var(--dur-menu-open) var(--ease-out) both;
+}
+
+.sheet[data-phase='closing'] {
+  animation: sheet-out var(--dur-menu-close) var(--ease-in) both;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  width: min(100% - 48px, 340px);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(124px, 16vh, 156px) 0 clamp(28px, 4vh, 40px);
+}
+
+.buddy {
+  margin-bottom: clamp(24px, 4vh, 36px);
+}
+
+/* ── Links ─────────────────────────────────────────────────── */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 0.6vh, 8px);
+}
+
+.item,
+.buddy,
+.social {
+  animation: rise var(--dur-menu-open) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger) + 60ms);
+}
+
+.sheet[data-phase='closing'] .item,
+.sheet[data-phase='closing'] .buddy,
+.sheet[data-phase='closing'] .social {
+  animation: none;
+}
+
+.link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 4px 0;
+  color: var(--color-ink-2);
+  font-size: var(--text-menu);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-menu);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.number {
+  width: 18px;
+  color: var(--color-ink-3);
+  font-size: var(--text-xs);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  transform: translateY(-1px);
+}
+
+.title {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.link[aria-current='location'] {
+  color: var(--color-ink);
+}
+
+@media (hover: hover) {
+  .link:hover {
+    color: var(--color-ink);
+  }
+
+  .link:hover .title {
+    transform: translateX(3px);
+  }
+}
+
+/* ── Social ────────────────────────────────────────────────── */
+.social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-top: auto;
+  padding-top: 48px;
+}
+
+.socialLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-ink-2);
+  font-size: var(--text-base);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .socialLink:hover {
+    color: var(--color-ink);
+  }
+}
+
+/* ── Small screens: tighter inset, everything fits without scrolling ── */
+@media (max-width: 640px) {
+  .sheet {
+    --inset: 8px;
+    border-radius: 20px;
+  }
+
+  .inner {
+    width: calc(100% - 48px);
+    padding-top: 108px;
+  }
+}
+
+@media (max-height: 620px) {
+  .inner {
+    padding-top: 84px;
+  }
+
+  .link {
+    font-size: 24px;
+  }
+}
+
+/* ── Keyframes ─────────────────────────────────────────────── */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}

@@ -1,0 +1,14 @@
+.twoTone {
+  max-width: var(--prose-max);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  text-wrap: pretty;
+}
+
+.lead {
+  color: var(--color-ink);
+}
+
+.rest {
+  color: var(--color-ink-2);
+}

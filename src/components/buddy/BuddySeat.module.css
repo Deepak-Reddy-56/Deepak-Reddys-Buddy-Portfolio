@@ -1,0 +1,60 @@
+.seat {
+  display: flex;
+  align-items: center;
+}
+
+.slot {
+  display: block;
+  flex: none;
+}
+
+.caption {
+  min-width: 0;
+}
+
+.line {
+  display: block;
+}
+
+/* Hero: the character is the page's focal point. */
+.hero {
+  --buddy-size: clamp(184px, 18.5vw, 264px);
+  flex-direction: column;
+  gap: clamp(20px, 2vw, 28px);
+  text-align: center;
+}
+
+.hero .line {
+  max-width: 280px;
+  text-wrap: balance;
+}
+
+/* Inline: opens a section, Buddy to the left of a short line. */
+.inline {
+  --buddy-size: clamp(72px, 6.4vw, 92px);
+  gap: clamp(14px, 1.3vw, 18px);
+}
+
+.inline .line {
+  max-width: 300px;
+}
+
+/* Menu: same arrangement, a touch smaller. */
+.menu {
+  --buddy-size: 84px;
+  gap: 16px;
+}
+
+.menu .line {
+  max-width: 230px;
+}
+
+@media (max-width: 640px) {
+  .inline .line {
+    max-width: 260px;
+  }
+
+  .menu {
+    --buddy-size: 68px;
+  }
+}

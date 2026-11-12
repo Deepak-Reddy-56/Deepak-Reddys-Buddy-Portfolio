@@ -25,7 +25,7 @@ The goal is not a static résumé page. The experience should feel like a small 
 ## Planned milestones
 
 - [x] M0 — Repository and project brief
-- [ ] M1 — Reference study, visual system, and responsive shell
+- [~] M1 — Reference study, visual system, and responsive shell (implemented, awaiting review)
 - [ ] M2 — Entry sequence: terminal interaction and first reveal
 - [ ] M3 — Buddy character prototype and motion language
 - [ ] M4 — Story-led home page and project showcase
@@ -37,7 +37,7 @@ The goal is not a static résumé page. The experience should feel like a small 
 
 ## Intended stack
 
-The stack is deliberately kept flexible until M1. The likely direction is a static-first TypeScript frontend with WebGL/Three.js for the character and GSAP for choreographed motion. Avoid adding dependencies until a milestone needs them.
+React 19 + TypeScript (strict) + Vite, CSS Modules with global design tokens, self-hosted Geist fonts. Three.js / React Three Fiber (M3) and GSAP / Lenis (when choreography needs them) are added only by the milestone that requires them.
 
 ## Development log
 
@@ -45,4 +45,30 @@ See [docs/BUILD_LOG.md](docs/BUILD_LOG.md) for the decisions and changes made mi
 
 ## Local setup
 
-Project scaffolding will be added in M1. Until then, this repository contains the project brief and build plan.
+Requires Node 20+.
+
+```bash
+npm install
+npm run dev        # local dev server
+npm run typecheck  # strict TypeScript
+npm run build      # typecheck + production build to dist/
+npm run preview    # serve the production build
+```
+
+Contact links are configured with `VITE_CONTACT_EMAIL` and `VITE_LINKEDIN_URL` (see `.env.example`). Unset values hide the link.
+
+## Structure
+
+```
+src/
+  app/            App, AppShell (controls, menu, rail, progress, footer)
+  pages/home/     Hero, About, Work, Contact sections
+  components/
+    shell/        ControlCluster, MenuSheet, SectionRail, ScrollProgress, SiteFooter
+    ui/           Icon, Action, SectionLabel, TwoTone
+    buddy/        BuddySeat, BuddyPlaceholder (replaced by the 3D Buddy in M3)
+  content/        site, sections, projects, dialogue — the only place copy lives
+  hooks/          active section, scroll progress/lock, focus trap, menu state, sound, reduced motion
+  lib/motion.ts   reads motion tokens so JS timing matches CSS
+  styles/         tokens.css (design tokens), base.css
+```

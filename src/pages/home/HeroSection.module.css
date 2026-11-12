@@ -1,0 +1,67 @@
+.hero {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  padding: 0 var(--gutter);
+}
+
+/* Identity sits just below the control cluster, on the left gutter. */
+.identity {
+  position: absolute;
+  top: calc(var(--control-top) + var(--control-size) + 28px);
+  left: var(--gutter);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.monogram {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--text-base);
+  line-height: 1.45;
+}
+
+.titleLead {
+  color: var(--color-ink);
+}
+
+.titleRest {
+  color: var(--color-ink-2);
+}
+
+.stage {
+  display: grid;
+  place-items: center;
+  padding: 140px 0 96px;
+}
+
+@media (max-width: 640px) {
+  .identity {
+    gap: 12px;
+  }
+
+  .monogram {
+    width: 44px;
+    height: 44px;
+  }
+
+  .stage {
+    padding-top: 160px;
+  }
+}

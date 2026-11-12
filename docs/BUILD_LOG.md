@@ -30,3 +30,40 @@ Build a distinctive, interactive personal portfolio that takes inspiration from 
 
 ### Next milestone: M1
 Create a reference board and implementation brief, decide the visual system (type, spacing, surfaces, color, material), choose the static-first stack, then scaffold the responsive shell. Do not begin with the full 3D character or all content at once.
+
+## 2026-11-12 — M1: visual foundation and responsive shell
+
+### Reconnaissance findings
+- The previous scaffold did not build: TypeScript 6 rejected the CSS side-effect import without Vite's client types. M1 had been marked mostly complete but was never compiled.
+- All UI lived in one `App.tsx` and one dense stylesheet; scroll handling set React state on every scroll event; the menu lacked focus management, scroll lock and an exit state; the header scrolled away.
+- The repository had no `.gitignore`.
+- Project copy had been written without inspecting repositories. Phishing Shield was described as URL heuristics on Express; its repository is actually a Gemini-powered message analyser.
+
+### Reference study (live site, desktop and 500px mobile)
+- One neutral grotesk; most copy at ~15px. Hierarchy is colour: lead phrase in ink, continuation in grey.
+- Fixed centred control cluster: 40px round buttons + wider menu pill, soft shadow.
+- Menu: full-height sheet inset ~16px with ~24px radius over a dimmed page; Buddy + one line; numbered links, current in ink.
+- Each section opens with a small Buddy seat and line, then a number-pill section label.
+- 1440px rhythm: ~62px gutter, left-aligned content (~930px), 120–170px between blocks.
+- Making-of: static Astro + Tailwind tokens, GSAP + Lenis, Three.js Buddy with a liquid-metal shader, pre-recorded voice with word timings, page transitions dropped because of Safari, early chat-dock Buddy rejected.
+- Note: the reference's character is also named "Buddy" — our model, face, voice and lines must be clearly original (M3).
+
+### What changed
+- Fixed the build (`src/vite-env.d.ts`); added `.gitignore`, `.env.example`, favicon.
+- New structure: `app/` (App, AppShell), `pages/home/` (Hero, About, Work, Contact + shared section rhythm), `components/shell|ui|buddy`, `content/`, `hooks/`, `lib/motion.ts`, `styles/tokens.css|base.css`.
+- Self-hosted Geist + Geist Mono via `@fontsource-variable` (bundled, latin subset ~29 kB loaded).
+- Motion durations defined once in CSS tokens and read by `lib/motion.ts`; zeroed under reduced motion.
+- Scroll progress written to `--scroll-progress` once per frame; active section via IntersectionObserver.
+- Menu state machine (`closed → open → closing`), focus trap, scroll lock, inert background.
+- Verified project index from six repositories; VROOM and InternPilot not found under the expected names.
+
+### Validation
+`npm run typecheck` ✓ · `npm run build` ✓ · Playwright + Chrome screenshots at 1440 / 1024 / 390 · keyboard, Escape, backdrop, focus-return, navigation and reduced-motion checks pass · zero off-origin requests · no console errors.
+
+### Fixed during visual review
+Rail colliding with the facts column; awkward wrap of the university name; facts misaligned with the lede; progress line drawing over the menu backdrop; controls not settling inside the open sheet; unbalanced hero line wrap; missing favicon 404.
+
+### Remaining / for owner review
+- Draft copy in About and Buddy's lines needs Deepak's approval.
+- Contact email and LinkedIn still unset (hidden until configured).
+- Real-device Safari / Android check.

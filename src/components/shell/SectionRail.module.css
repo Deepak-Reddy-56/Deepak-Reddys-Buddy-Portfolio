@@ -1,0 +1,78 @@
+.rail {
+  position: fixed;
+  z-index: var(--z-rail);
+  top: 50%;
+  right: calc(20px + var(--scrollbar-comp));
+  transform: translateY(-50%);
+}
+
+.rail ol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 28px;
+  height: 22px;
+}
+
+.dot {
+  display: block;
+  width: 5px;
+  height: 5px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: var(--color-ink-3);
+  transition:
+    background-color var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.link[aria-current='location'] .dot {
+  background: var(--color-ink);
+  transform: scale(1.35);
+}
+
+.label {
+  position: absolute;
+  right: 28px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-control);
+  color: var(--color-ink);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(4px);
+  pointer-events: none;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.number {
+  color: var(--color-ink-3);
+}
+
+.link:hover .label,
+.link:focus-visible .label {
+  opacity: 1;
+  transform: none;
+}
+
+.link:focus-visible {
+  outline-offset: 0;
+}
+
+/* Only where there's room in the margin. */
+@media (max-width: 1239px) {
+  .rail {
+    display: none;
+  }
+}

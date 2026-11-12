@@ -1,0 +1,116 @@
+/*
+ * Design tokens — the single source of truth for the visual system.
+ * Motion durations are read at runtime by src/lib/motion.ts, so CSS and
+ * TypeScript never disagree about timing.
+ */
+:root {
+  /* ── Colour ─────────────────────────────────────────────── */
+  --color-bg: #ffffff;
+  --color-ink: #111111;          /* primary text, lead sentences */
+  --color-ink-2: #8b8b8b;        /* continuation text, secondary */
+  --color-ink-3: #b9b9b6;        /* numbers, tertiary meta */
+  --color-surface: #f1f1ed;      /* number pills, media panels */
+  --color-surface-2: #f7f7f4;    /* hover wash */
+  --color-line: rgba(17, 17, 17, 0.08);
+  --color-backdrop: rgba(24, 24, 22, 0.16);
+  --color-status-live: #d9c31c;  /* the one accent: a status dot */
+  --color-status-wip: #c4c4bf;
+  --color-focus: #111111;
+
+  /* ── Typography ─────────────────────────────────────────── */
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;             /* the workhorse size — most copy lives here */
+  --text-md: 17px;
+  --text-menu: clamp(26px, 2.1vw, 30px);
+
+  --leading-tight: 1.2;
+  --leading-base: 1.47;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+
+  --tracking-tight: -0.011em;
+  --tracking-menu: -0.025em;
+
+  /* ── Space (4px base) ───────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+  --space-11: 160px;
+
+  /* Layout */
+  --gutter: clamp(20px, 4.3vw, 64px);
+  --content-max: 930px;          /* left-aligned editorial column */
+  --prose-max: 440px;            /* comfortable line length at 15px */
+  --section-gap: clamp(112px, 14vw, 176px);
+  --control-size: 40px;
+  --control-top: 12px;
+
+  /* ── Radius ─────────────────────────────────────────────── */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  /* ── Shadow ─────────────────────────────────────────────── */
+  --shadow-control: 0 0 0 1px rgba(17, 17, 17, 0.045), 0 6px 18px -6px rgba(17, 17, 17, 0.14);
+  --shadow-control-hover: 0 0 0 1px rgba(17, 17, 17, 0.06), 0 10px 24px -8px rgba(17, 17, 17, 0.2);
+  --shadow-sheet: 0 0 0 1px rgba(17, 17, 17, 0.04), 0 40px 100px -20px rgba(17, 17, 17, 0.22);
+
+  /* ── Motion ─────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);      /* arrivals */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);   /* state changes */
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);       /* departures */
+
+  --dur-instant: 120ms;
+  --dur-fast: 180ms;
+  --dur-base: 280ms;
+  --dur-slow: 480ms;
+  --dur-menu-open: 560ms;
+  --dur-menu-close: 280ms;
+  --stagger: 32ms;
+
+  /* Layering */
+  --z-content: 1;
+  --z-rail: 20;
+  --z-progress: 30;
+  --z-backdrop: 40;
+  --z-sheet: 50;
+  --z-controls: 60;
+  --z-skip: 100;
+
+  /* Set by useScrollLock so fixed elements don't jump when the scrollbar hides */
+  --scrollbar-comp: 0px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --text-base: 16px;
+    --text-menu: 28px;
+    --control-size: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms;
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+    --dur-menu-open: 0ms;
+    --dur-menu-close: 0ms;
+    --stagger: 0ms;
+  }
+}

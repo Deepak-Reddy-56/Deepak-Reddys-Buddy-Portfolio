@@ -1,0 +1,30 @@
+.page {
+  position: relative;
+  z-index: var(--z-content);
+}
+
+.main {
+  outline: none;
+}
+
+.skip {
+  position: fixed;
+  z-index: var(--z-skip);
+  top: var(--control-top);
+  left: var(--gutter);
+  height: var(--control-size);
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-size: var(--text-sm);
+  transform: translateY(-200%);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.skip:focus-visible {
+  transform: none;
+  outline-offset: 2px;
+}

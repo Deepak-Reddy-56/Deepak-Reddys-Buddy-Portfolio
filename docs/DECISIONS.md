@@ -9,3 +9,13 @@
 - Build the visual system and responsive shell before 3D.
 - Use project evidence and real writing; keep unconfirmed claims out of the public site.
 - Document every milestone and major design decision.
+
+## 2026-11-12 — M1
+- Typeface: Geist + Geist Mono, self-hosted. No external font requests.
+- Visual direction: quiet editorial white; hierarchy through colour (ink lead / grey continuation), not size. One accent only (status dot).
+- Styling: CSS Modules + global tokens. No Tailwind, GSAP or Lenis yet; motion is CSS until choreography needs a timeline (M2/M4).
+- Motion tokens live in CSS; JS reads them so timers always match and reduced motion zeroes both.
+- Scroll-driven UI never sets React state per scroll event.
+- Buddy appears only in reserved seats (`BuddySeat`); M3 will move one shared character between seats.
+- Contact destinations come from config/env and are hidden when unset — no placeholder links.
+- Section rail sits in the right margin and only at ≥1240px, where it never touches content.
