@@ -67,3 +67,15 @@ Rail colliding with the facts column; awkward wrap of the university name; facts
 - Draft copy in About and Buddy's lines needs Deepak's approval.
 - Contact email and LinkedIn still unset (hidden until configured).
 - Real-device Safari / Android check.
+
+## Checkpoint — 2026-11-12 (end of M1)
+- **Milestone:** M1 approved by owner after visual review (1440 / 1024 / 390). M2 not started.
+- **Branch / commit:** `m1-visual-foundation` @ `2f4dfd6` (pushed). `main` untouched at `b8fcdf8`; not merged.
+- **Deployment:** Vercel project `deepak-reddys-buddy-portfolio`, commit status **success** ("Deployment has completed").
+  - Inspect: https://vercel.com/deepak-2630s-projects/deepak-reddys-buddy-portfolio/7h8ZivZvNVWYUscLYZew2cA6YxaW
+  - Branch preview: https://deepak-reddys-buddy-portfolio-git-08e46c-deepak-2630s-projects.vercel.app/
+  - Preview is behind Vercel Deployment Protection (redirects to Vercel login); rendered output not yet verified on the preview itself.
+- **Pre-commit checks:** `git diff --check` clean · 6 projects, stacks match `src/content/projects.ts` and source repos · no placeholder contacts, secrets or `.env` files tracked · typecheck ✓ · build ✓.
+- **Completed:** see the M1 entry above and `docs/M1_ACCEPTANCE.md`. Decisions: `docs/DECISIONS.md` (M1).
+- **Known issues:** draft copy (About, Buddy lines) awaiting owner wording · contact email / LinkedIn unset (hidden) · VROOM / InternPilot repo URLs unknown · placeholder Buddy resembles the reference (M3 must be original) · no real-device test yet.
+- **Exact next task:** owner opens the preview (or disables protection for previews) and checks it on a real phone; then plan M2 (entry sequence + liquid/chrome material) for approval.
