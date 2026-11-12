@@ -116,9 +116,13 @@ After fixes (software GL, so absolute values are not representative of a GPU): 1
 
 **Debug isolation.** Production bundle contains no probe code (0 matches for its identifiers). HUD appears only on dev/QA builds with `?introDebug`; never on production, never on the normal homepage.
 
-## Checkpoint — 2026-11-12 (M2 refined, awaiting review)
-- **Milestone:** M2 + refinement on `m2-introduction` (from `a73974e`), **uncommitted**, not pushed. `m1-visual-foundation` and `main` untouched.
-- **Latest commit on branch:** `a73974e`.
-- **Build/test:** typecheck ✓ · build ✓ (86 kB gzip JS) · functional suite ✓ · frame-accurate capture ✓ · audio capture ✓ · debug isolation ✓.
-- **Known issues:** hardware-GPU frame rate unverified in sandbox (probe provided) · sound character needs owner ear-test · draft copy / contact details as before.
-- **Exact next task:** owner reviews; on approval commit `feat(m2): …`, push `m2-introduction`, verify the Vercel preview on a real device.
+## Checkpoint — 2026-11-12 (end of M2)
+- **Milestone:** M2 approved and committed. M3 not started.
+- **Branch / commit:** `m2-introduction` @ `834709a` (pushed; branched from `a73974e`). `main` (`b8fcdf8`) and `m1-visual-foundation` (`a73974e`) untouched; nothing merged.
+- **Deployment:** Vercel commit status **success** ("Deployment has completed").
+  - Inspect: https://vercel.com/deepak-2630s-projects/deepak-reddys-buddy-portfolio/GkAjTfHDapakjGHtijuGDiEPtXB4
+  - Branch preview: https://deepak-reddys-buddy-portfolio-git-0fa936-deepak-2630s-projects.vercel.app/
+  - Behind Vercel Deployment Protection (redirects to Vercel login); rendered output on the preview not yet verified.
+- **Build/test:** typecheck ✓ · build ✓ (86 kB gzip JS) · functional suite ✓ (1440/1024/390, reduced motion, no-WebGL, sound, skip/replay) · frame-accurate capture ✓ (3.6 s, hand-off ≈1.6/255) · audio capture ✓ · debug isolation ✓.
+- **Known issues:** GPU frame rate unverified (sandbox is software-rendered; use `npm run dev` → `/?intro&introDebug`) · sound character needs owner ear-test · draft copy, contact details, VROOM/InternPilot URLs pending · placeholder Buddy to be replaced by an original 3D Buddy in M3.
+- **Exact next task:** owner opens the preview signed in (or disables preview protection) and runs the probe on a real device; then plan M3 (Buddy 3D character and animation system) for approval.
