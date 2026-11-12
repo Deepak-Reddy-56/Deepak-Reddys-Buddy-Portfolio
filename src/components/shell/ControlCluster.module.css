@@ -103,3 +103,16 @@
   top: calc(50% - 0.8px);
   transform: rotate(-45deg) scaleX(0.92);
 }
+
+/* Intro: the cluster drops in as the page is revealed. */
+.controls {
+  transition:
+    transform var(--dur-menu-close) var(--ease-in-out),
+    opacity 600ms var(--ease-out);
+}
+
+:global(html[data-intro='playing']) .controls {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: none;
+}

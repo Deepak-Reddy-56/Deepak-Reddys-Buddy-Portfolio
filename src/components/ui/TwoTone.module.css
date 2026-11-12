@@ -12,3 +12,18 @@
 .rest {
   color: var(--color-ink-2);
 }
+
+/* Staged word reveal, used when the intro hands over to the page. */
+.word {
+  display: inline-block;
+  transition:
+    opacity 420ms var(--ease-out),
+    transform 420ms var(--ease-out);
+  transition-delay: calc(var(--w, 0) * 55ms + 520ms);
+}
+
+:global(html[data-intro='playing']) .word {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: none;
+}

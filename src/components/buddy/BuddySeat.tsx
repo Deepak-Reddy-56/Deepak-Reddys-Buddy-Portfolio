@@ -25,12 +25,12 @@ type BuddySeatProps = {
 export function BuddySeat({ seat, size, line, className }: BuddySeatProps) {
   return (
     <figure className={[styles.seat, styles[size], className].filter(Boolean).join(' ')} data-buddy-seat={seat}>
-      <span className={styles.slot}>
+      <span className={styles.slot} data-buddy-slot>
         <BuddyPlaceholder />
       </span>
       <figcaption className={styles.caption}>
         <span className="visually-hidden">Buddy says: </span>
-        <TwoTone as="span" lead={line.lead} rest={line.rest} className={styles.line} />
+        <TwoTone as="span" lead={line.lead} rest={line.rest} className={styles.line} words={size === 'hero'} />
       </figcaption>
     </figure>
   );

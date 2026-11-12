@@ -12,13 +12,14 @@ A visitor should feel that they have entered a small, thoughtful digital world�
 - Motion token system and reduced-motion fallback.
 **Acceptance:** responsive shell works on mobile and desktop; no 3D dependencies required yet.
 
-## M2 — Boot sequence and material language
-**Goal:** create a memorable entry.
-- Terminal/command prompt as a visitor-triggered intro.
-- Typed command, key sound toggle, skip intro.
-- Liquid/chrome visual experiment as an independent, performant layer.
-- Transition from terminal visual into Buddy's first appearance.
-**Acceptance:** intro works with keyboard, touch, skip, sound off, and reduced motion.
+## M2 — Introduction (implemented, awaiting review)
+**Goal:** a visitor-triggered entry that feels like one continuous object: terminal → liquid chrome → Buddy → homepage.
+- Self-typing terminal (`./start-buddy`), Enter / Run, Skip, Sound On/Off, replay from menu and footer.
+- Zero-dependency WebGL stage; 2.5D SDF liquid-chrome shader with procedural environment (no HDRI, no network).
+- The shader takes over the terminal's exact box, morphs to Buddy's exact homepage seat, then hands off to the DOM.
+- Web Audio synthesised sounds, gesture-gated, preference-aware.
+- First-visit only; reduced-motion and no-WebGL paths.
+**Acceptance:** see `docs/M2_ACCEPTANCE.md`.
 
 ## M3 — Buddy prototype
 **Goal:** original character with presence and personality.

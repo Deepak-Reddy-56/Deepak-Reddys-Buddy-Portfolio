@@ -65,3 +65,16 @@
     padding-top: 160px;
   }
 }
+
+/* Intro: identity arrives once the page is revealed. */
+.identity {
+  transition:
+    opacity 600ms var(--ease-out) 200ms,
+    transform 600ms var(--ease-out) 200ms;
+}
+
+:global(html[data-intro='playing']) .identity {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: none;
+}

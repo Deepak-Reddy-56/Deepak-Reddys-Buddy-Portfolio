@@ -89,6 +89,7 @@
   --z-backdrop: 40;
   --z-sheet: 50;
   --z-controls: 60;
+  --z-intro: 80;
   --z-skip: 100;
 
   /* Set by useScrollLock so fixed elements don't jump when the scrollbar hides */

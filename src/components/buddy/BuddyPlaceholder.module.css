@@ -97,14 +97,23 @@
   border-radius: 0 0 0.6em 0.6em;
 }
 
+/* Starts and ends at rest so the intro hand-off never jumps. */
 @keyframes float {
   0%,
   100% {
-    transform: translateY(0) rotate(-2deg);
+    transform: none;
   }
-  50% {
-    transform: translateY(-4%) rotate(1.5deg);
+  30% {
+    transform: translateY(-3%) rotate(-1.5deg);
   }
+  70% {
+    transform: translateY(-2%) rotate(1.5deg);
+  }
+}
+
+:global(html[data-intro]) [data-buddy-seat='hero'] .body,
+:global(html[data-intro]) [data-buddy-seat='hero'] .eye {
+  animation: none;
 }
 
 @keyframes blink {

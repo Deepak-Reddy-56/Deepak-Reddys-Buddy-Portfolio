@@ -76,3 +76,12 @@
     display: none;
   }
 }
+
+.rail {
+  transition: opacity 600ms var(--ease-out) 300ms;
+}
+
+:global(html[data-intro='playing']) .rail {
+  opacity: 0;
+  transition: none;
+}

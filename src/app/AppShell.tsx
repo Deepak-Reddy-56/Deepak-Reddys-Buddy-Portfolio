@@ -5,6 +5,8 @@ import { ScrollProgress } from '../components/shell/ScrollProgress';
 import { SectionRail } from '../components/shell/SectionRail';
 import { SiteFooter } from '../components/shell/SiteFooter';
 import { sectionIds, type SectionId } from '../content/sections';
+import { IntroSequence } from '../features/intro/IntroSequence';
+import { useIntroGate } from '../features/intro/useIntroGate';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useMenuState } from '../hooks/useMenuState';
@@ -21,6 +23,7 @@ import styles from './AppShell.module.css';
 export function AppShell({ children }: { children: ReactNode }) {
   const menu = useMenuState();
   const sound = useSoundPreference();
+  const intro = useIntroGate();
   const activeId = useActiveSection(sectionIds);
 
   const chromeRef = useRef<HTMLDivElement>(null);
@@ -28,7 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const activeLinkRef = useRef<HTMLAnchorElement>(null);
 
   useScrollProgress();
-  useScrollLock(menu.isOpen);
+  useScrollLock(menu.isOpen || intro.active);
   useFocusTrap(chromeRef, menu.isOpen, { initialFocus: activeLinkRef, onEscape: menu.close });
 
   const navigate = useCallback(
@@ -48,7 +51,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     [navigate],
   );
 
-  const backgroundInert = menu.isMounted;
+  const { replay: replayIntro } = intro;
+  const replay = useCallback(() => {
+    menu.close();
+    replayIntro();
+  }, [menu, replayIntro]);
+
+  const backgroundInert = menu.isMounted || intro.active;
 
   return (
     <>
@@ -58,7 +67,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <ScrollProgress />
 
-      <div ref={chromeRef}>
+      <div ref={chromeRef} inert={intro.active}>
         <ControlCluster
           menuPhase={menu.phase}
           onToggleMenu={menu.toggle}
@@ -74,6 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onNavigate={navigate}
             onClose={menu.close}
             activeLinkRef={activeLinkRef}
+            onReplayIntro={replay}
           />
         ) : null}
       </div>
@@ -83,8 +93,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main id="main" tabIndex={-1} className={styles.main}>
           {children}
         </main>
-        <SiteFooter />
+        <SiteFooter onReplayIntro={replay} />
       </div>
+
+      {intro.active ? (
+        <IntroSequence
+          key={intro.runKey}
+          soundEnabled={sound.enabled}
+          soundSupported={sound.supported}
+          onSound={sound.set}
+          onFinish={intro.finish}
+        />
+      ) : null}
     </>
   );
 }

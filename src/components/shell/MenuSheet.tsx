@@ -13,6 +13,7 @@ type MenuSheetProps = {
   onNavigate: (id: SectionId) => void;
   onClose: () => void;
   activeLinkRef: RefObject<HTMLAnchorElement | null>;
+  onReplayIntro: () => void;
 };
 
 /**
@@ -20,7 +21,7 @@ type MenuSheetProps = {
  * Buddy introduces it; sections are listed by number, current one in ink.
  * Mounted only while open or closing (see useMenuState).
  */
-export function MenuSheet({ phase, activeId, onNavigate, onClose, activeLinkRef }: MenuSheetProps) {
+export function MenuSheet({ phase, activeId, onNavigate, onClose, activeLinkRef, onReplayIntro }: MenuSheetProps) {
   const handleLink = (id: SectionId) => (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     onNavigate(id);
@@ -63,6 +64,15 @@ export function MenuSheet({ phase, activeId, onNavigate, onClose, activeLinkRef 
               })}
             </ol>
           </nav>
+
+          <button
+            type="button"
+            className={styles.replay}
+            style={{ '--i': sections.length + 1 } as CSSProperties}
+            onClick={onReplayIntro}
+          >
+            <span aria-hidden="true">↺</span> Replay the intro
+          </button>
 
           <ul className={styles.social} style={{ '--i': sections.length + 2 } as CSSProperties}>
             {socialLinks().map((link) => (

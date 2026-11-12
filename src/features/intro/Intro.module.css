@@ -1,0 +1,109 @@
+.overlay {
+  position: fixed;
+  z-index: var(--z-intro);
+  inset: 0;
+  overflow: hidden;
+  outline: none;
+}
+
+/* The white field the intro plays on; it fades to reveal the homepage. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+  transition: opacity 700ms var(--ease-in-out);
+}
+
+.overlay[data-step='leaving'] {
+  pointer-events: none;
+}
+
+.overlay[data-step='leaving'] .backdrop {
+  opacity: 0;
+}
+
+/* ── Bottom controls ───────────────────────────────────────── */
+.controls {
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.overlay[data-step='running'] .controls .sound,
+.overlay[data-step='leaving'] .controls {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sound {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-control);
+  transform: translateX(-50%);
+  font-size: var(--text-sm);
+  transition: opacity var(--dur-base) var(--ease-out);
+  animation: controls-in 600ms var(--ease-out) 500ms backwards;
+}
+
+.soundLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px 0 8px;
+  color: var(--color-ink-2);
+}
+
+.soundOption {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  color: var(--color-ink-2);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.soundOption[aria-pressed='true'] {
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+.skip {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 30px;
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    text-decoration-color var(--dur-fast) var(--ease-out);
+  animation: controls-in 600ms var(--ease-out) 500ms backwards;
+}
+
+@media (hover: hover) {
+  .skip:hover {
+    color: var(--color-ink);
+    text-decoration-color: currentColor;
+  }
+}
+
+@media (max-width: 640px) {
+  .sound {
+    left: var(--gutter);
+    transform: none;
+  }
+}
+
+@keyframes controls-in {
+  from {
+    opacity: 0;
+  }
+}

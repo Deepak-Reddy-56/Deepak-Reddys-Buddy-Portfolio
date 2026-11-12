@@ -1,0 +1,244 @@
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { soundEngine } from '../../lib/audio/soundEngine';
+import { FrameLoop } from '../../lib/frameLoop';
+import { supportsWebGL, type ShaderStage } from '../../lib/webgl/ShaderStage';
+import { createTimingProbe, introDebugEnabled } from './introDebug';
+import { IntroControls } from './IntroControls';
+import { boxFromRect, introUniforms, marks, type Box } from './introTimeline';
+import { LiquidScene } from './LiquidScene';
+import { COMMAND, TerminalScene } from './TerminalScene';
+import type { IntroEnd } from './useIntroGate';
+import styles from './Intro.module.css';
+
+type Step = 'typing' | 'ready' | 'running' | 'leaving';
+
+type IntroSequenceProps = {
+  soundEnabled: boolean;
+  soundSupported: boolean;
+  onSound: (on: boolean) => void;
+  onFinish: (reason: IntroEnd) => void;
+};
+
+/** Marks used when WebGL is unavailable: the terminal recedes, the page fades up. */
+// Page and Buddy emerge behind the terminal *before* it recedes, so no frame is ever empty.
+const fallbackMarks = { outputEnd: 620, swapStart: 780, revealPage: [480, 1180], handoff: [480, 740], done: 1400 } as const;
+
+const TERMINAL_RADIUS = 16;
+const HERO_SLOT = '[data-buddy-seat="hero"] [data-buddy-slot]';
+
+function setIntroState(value: 'playing' | 'leaving' | 'handoff' | null): void {
+  const root = document.documentElement;
+  if (value) root.dataset.intro = value;
+  else delete root.dataset.intro;
+}
+
+/**
+ * The introduction, as one clock:
+ *   A  terminal types → visitor runs it
+ *   B  the window itself turns to liquid chrome (same box, now in the shader)
+ *   C  the liquid settles into Buddy, exactly where the homepage keeps him,
+ *      while the page fades up around him; then the DOM Buddy takes over.
+ */
+export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish }: IntroSequenceProps) {
+  const reducedMotion = useReducedMotion();
+  const [step, setStep] = useState<Step>('typing');
+  const [typed, setTyped] = useState(0);
+  const [outputLines, setOutputLines] = useState(0);
+  const [handedOff, setHandedOff] = useState(false);
+  const [webgl, setWebgl] = useState(supportsWebGL);
+  const [touch] = useState(() => window.matchMedia('(hover: none)').matches);
+
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
+  const runRef = useRef<HTMLButtonElement>(null);
+  const stageRef = useRef<ShaderStage | null>(null);
+  const loopRef = useRef<FrameLoop | null>(null);
+  const stepRef = useRef<Step>('typing');
+  const finished = useRef(false);
+
+  const goTo = useCallback((next: Step) => {
+    stepRef.current = next;
+    setStep(next);
+  }, []);
+
+  const finish = useCallback(
+    (reason: IntroEnd) => {
+      if (finished.current) return;
+      finished.current = true;
+      loopRef.current?.dispose();
+      loopRef.current = null;
+      setIntroState(null);
+      onFinish(reason);
+    },
+    [onFinish],
+  );
+
+  const skip = useCallback(() => finish('skip'), [finish]);
+  const markUnavailable = useCallback(() => {
+    setWebgl(false);
+    // Lost mid-sequence: the DOM terminal is already gone, so reveal the page now.
+    if (stepRef.current === 'running' || stepRef.current === 'leaving') finish('done');
+  }, [finish]);
+
+  // Page state for the homepage's CSS (hidden until the reveal). Before paint.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    setIntroState('playing');
+    return () => setIntroState(null);
+  }, []);
+
+  useEffect(() => () => loopRef.current?.dispose(), []);
+
+  // Scene A: the command types itself.
+  useEffect(() => {
+    if (step !== 'typing') return;
+    if (reducedMotion) {
+      setTyped(COMMAND.length);
+      goTo('ready');
+      return;
+    }
+    if (typed >= COMMAND.length) {
+      goTo('ready');
+      return;
+    }
+    const delay = typed === 0 ? 900 : 48 + Math.random() * 46;
+    const timer = window.setTimeout(() => {
+      setTyped((count) => count + 1);
+      soundEngine.play('key');
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [step, typed, reducedMotion, goTo]);
+
+  const run = useCallback(() => {
+    const current = stepRef.current;
+    if (current !== 'typing' && current !== 'ready') return;
+    soundEngine.unlock();
+    soundEngine.play('enter');
+    setTyped(COMMAND.length);
+
+    if (reducedMotion) {
+      finish('done');
+      return;
+    }
+    goTo('running');
+
+    const windowEl = windowRef.current;
+    const slot = document.querySelector<HTMLElement>(HERO_SLOT);
+    const stage = stageRef.current;
+    const useShader = webgl && stage !== null && windowEl !== null && slot !== null;
+
+    const from: Box | null = windowEl ? boxFromRect(windowEl.getBoundingClientRect()) : null;
+    let to: Box | null = slot ? boxFromRect(slot.getBoundingClientRect()) : null;
+    const onResize = () => {
+      if (slot) to = boxFromRect(slot.getBoundingClientRect());
+    };
+    window.addEventListener('resize', onResize);
+
+    const m = useShader ? marks : fallbackMarks;
+    const fired = new Set<string>();
+    const once = (key: string, condition: boolean, action: () => void) => {
+      if (condition && !fired.has(key)) {
+        fired.add(key);
+        action();
+      }
+    };
+
+    const probe = introDebugEnabled ? createTimingProbe() : null;
+
+    const loop = new FrameLoop((t) => {
+      probe?.frame(t);
+      once('line1', t >= 120, () => setOutputLines(1));
+      once('line2', t >= 400, () => setOutputLines(2));
+      once('startup', t >= (useShader ? marks.chrome[0] : 300), () => soundEngine.play('startup'));
+      once('swap', t >= m.swapStart, () => setHandedOff(true));
+      once('reveal', t >= m.revealPage[0], () => {
+        goTo('leaving');
+        setIntroState('leaving');
+      });
+      once('handoff', t >= m.handoff[0], () => setIntroState('handoff'));
+
+      if (useShader && stage && from && to && stageRef.current === stage) {
+        once('blip', t >= marks.face[0] + 120, () => soundEngine.play('blip'));
+        const u = introUniforms(t, from, to, TERMINAL_RADIUS);
+        stage.set('u_time', t / 1000);
+        stage.set('u_center', u.center);
+        stage.set('u_half', u.half);
+        stage.set('u_radius', u.radius);
+        stage.set('u_morph', u.morph);
+        stage.set('u_liquid', u.liquid);
+        stage.set('u_drops', u.drops);
+        stage.set('u_chrome', u.chrome);
+        stage.set('u_face', u.face);
+        stage.set('u_blink', u.blink);
+        stage.set('u_settle', u.settle);
+        stage.set('u_alpha', u.alpha);
+        try {
+          stage.draw();
+        } catch {
+          // A failing GPU never leaves a blank screen: go straight to the page.
+          window.removeEventListener('resize', onResize);
+          finish('done');
+          return;
+        }
+      }
+
+      if (t >= m.done) {
+        window.removeEventListener('resize', onResize);
+        probe?.report(t);
+        finish('done');
+      }
+    });
+    loopRef.current = loop;
+    loop.start();
+  }, [reducedMotion, webgl, finish, goTo]);
+
+  // Enter runs from anywhere (buttons keep their own Enter behaviour).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' || event.repeat) return;
+      // Run and Skip keep their native Enter; everywhere else (incl. the sound switch) Enter runs.
+      if (event.target instanceof HTMLButtonElement && !event.target.hasAttribute('data-enter-runs')) return;
+      event.preventDefault();
+      run();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [run]);
+
+  // Focus the dialog itself (not Run) so no focus ring flashes on load; Enter still runs.
+  useFocusTrap(overlayRef, true, { initialFocus: overlayRef, onEscape: skip });
+
+  const running = step === 'running' || step === 'leaving';
+
+  return (
+    <div
+      ref={overlayRef}
+      className={styles.overlay}
+      data-step={step}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Introduction"
+      tabIndex={-1}
+    >
+      <div className={styles.backdrop} aria-hidden="true" />
+      {webgl ? <LiquidScene stageRef={stageRef} onUnavailable={markUnavailable} /> : null}
+      <TerminalScene
+        typed={typed}
+        outputLines={outputLines}
+        ready={step === 'ready'}
+        running={running}
+        handedOff={handedOff && webgl}
+        fallbackExit={handedOff && !webgl}
+        touch={touch}
+        onRun={run}
+        windowRef={windowRef}
+        runRef={runRef}
+      />
+      <div className={styles.controls}>
+        <IntroControls soundEnabled={soundEnabled} soundSupported={soundSupported} onSound={onSound} onSkip={skip} />
+      </div>
+    </div>
+  );
+}

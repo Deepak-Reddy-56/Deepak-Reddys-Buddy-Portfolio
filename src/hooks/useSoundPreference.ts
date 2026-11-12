@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { soundEngine } from '../lib/audio/soundEngine';
 
 const STORAGE_KEY = 'buddy:sound';
 
@@ -10,24 +11,37 @@ function readStored(): boolean {
   }
 }
 
+function store(on: boolean): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, on ? 'on' : 'off');
+  } catch {
+    /* storage unavailable (private mode); keep in-memory state */
+  }
+}
+
 /**
  * The visitor's sound preference. Off by default; persisted per browser.
- * M1 stores the choice only — audio arrives with the entry sequence (M2).
+ * Changing it is always a user gesture, so it also unlocks the audio engine.
  */
 export function useSoundPreference() {
-  const [enabled, setEnabled] = useState<boolean>(readStored);
+  const [enabled, setEnabledState] = useState<boolean>(readStored);
+  const enabledRef = useRef(enabled);
 
-  const toggle = useCallback(() => {
-    setEnabled((current) => {
-      const next = !current;
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next ? 'on' : 'off');
-      } catch {
-        /* storage unavailable (private mode); keep in-memory state */
-      }
-      return next;
-    });
+  useEffect(() => {
+    enabledRef.current = enabled;
+    soundEngine.setEnabled(enabled);
+  }, [enabled]);
+
+  const set = useCallback((next: boolean) => {
+    soundEngine.unlock();
+    soundEngine.setEnabled(next);
+    enabledRef.current = next;
+    if (next) soundEngine.play('toggle');
+    store(next);
+    setEnabledState(next);
   }, []);
 
-  return { enabled, toggle };
+  const toggle = useCallback(() => set(!enabledRef.current), [set]);
+
+  return { enabled, set, toggle, supported: soundEngine.supported };
 }

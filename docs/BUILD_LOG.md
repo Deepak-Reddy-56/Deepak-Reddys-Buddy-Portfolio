@@ -79,3 +79,46 @@ Rail colliding with the facts column; awkward wrap of the university name; facts
 - **Completed:** see the M1 entry above and `docs/M1_ACCEPTANCE.md`. Decisions: `docs/DECISIONS.md` (M1).
 - **Known issues:** draft copy (About, Buddy lines) awaiting owner wording · contact email / LinkedIn unset (hidden) · VROOM / InternPilot repo URLs unknown · placeholder Buddy resembles the reference (M3 must be original) · no real-device test yet.
 - **Exact next task:** owner opens the preview (or disables protection for previews) and checks it on a real phone; then plan M2 (entry sequence + liquid/chrome material) for approval.
+
+## 2026-11-12 — M2: the introduction
+
+### What changed
+- New `src/features/intro/`: `IntroSequence` (orchestrator, one clock), `TerminalScene`, `LiquidScene`, `IntroControls`, `introTimeline`, `liquidChrome.frag`, `useIntroGate`.
+- New `src/lib/`: `frameLoop.ts`, `easing.ts`, `webgl/ShaderStage.ts`, `webgl/glsl/chrome.ts`, `audio/soundEngine.ts`.
+- M1 touch points (small, opt-in): AppShell (gate, inert/scroll-lock during intro, replay), MenuSheet + SiteFooter (replay), BuddySeat (`data-buddy-slot`, hero word reveal), TwoTone (`words`), useSoundPreference (drives the sound engine), reveal CSS in ControlCluster / Hero / Rail / BuddySeat / BuddyPlaceholder, tokens (`--z-intro`).
+
+### Found and fixed during visual QA
+- Fast ellipse SDF approximation returned ~0 at the centre → dark artifact; replaced with scaled-circle distance.
+- Flat plateau in the height profile mirrored the horizon as a dark "lens"; bevel now spans the full depth.
+- Chrome → DOM placeholder pop at hand-off; added a `settle` term easing to a pearl look.
+- "Hammered foil" noise too busy; lower frequency/amplitude.
+- Programmatic focus put a heavy ring on Run; the dialog itself now takes focus.
+- Enter after clicking Sound On re-pressed "On" instead of running; sound options now let Enter run.
+
+### Validation
+See `docs/M2_ACCEPTANCE.md`. Typecheck ✓ · build ✓ · flows ✓ at 1440/1024/390 · reduced motion ✓ · no-WebGL ✓.
+
+## 2026-11-12 — M2 refinement pass
+- Chrome: removed the horizon term (cause of the equator seam); warped continuous environment; subtler iridescence.
+- Hand-off: GLSL mirror of the CSS placeholder (`buddyCard.ts`), smooth silhouette blending, matched eye gradient and U-shaped mouth; breathing wobble now ends exactly at rest. Measured mean diff ≈1.6/255 (1440/1024/390).
+- Timing: `FrameLoop` uses `performance.now()`; frame-accurate capture via Chrome virtual time confirms 3.6 s, synced, no jumps.
+- Fallback: overlapped reveal (no blank frame, measured); draw failure / context loss → page.
+- Sound: recorded real output; all four cues present; key clicks raised ~6 dB (still quietest).
+- Fixed during the pass: a script slip emptied `liquidChrome.frag.ts` (untracked); rewritten in full and re-verified.
+
+## 2026-11-12 — M2 pre-commit checks
+**Performance.** The earlier "107 slow frames" came from the virtual-time capture (frames arrive in bursts per 33 ms step) and a >20 ms count — not a rendering measurement. The probe now reports p50/p95/p99/worst, frames >16.7 ms and >33.3 ms, the measured refresh rate and the WebGL renderer. Real-time runs in this sandbox: renderer **SwiftShader (software; no hardware acceleration)**, refresh 60 Hz (headless rAF). Two real stalls were found and fixed:
+- Swap stall (worst frame 10.5 s at 1440, at timeline 622 ms): first-time compositing of the WebGL canvas when it became visible. Canvas is now composited from mount (transparent; shader alpha gates visibility).
+- Pipeline warm-up: one invisible draw while the terminal types.
+After fixes (software GL, so absolute values are not representative of a GPU): 1440 p50 292 / p95 331 / p99 349 / worst 379 ms; 1024 p50 177 / p95 199 / p99 204 / worst 207 ms; 390@2x p50 115 / p95 130 / p99 136 / worst 138 ms. Worst ≈ p99: flat frame times, no spikes. 60 fps on real hardware must be confirmed with the probe on a GPU.
+
+**Sound** (recorded from the actual output stream). Peaks: startup −20 dBFS (10–90 % attack 163 ms), enter −27 dBFS, blip −29 dBFS (attack softened to 30 ms; measured 9.7 ms 10–90 %), key clicks ≈ −32 dBFS peak. No clipping. Sound off → 21.9 s recorded at −180 dBFS (digital silence). No AudioContext exists before a user gesture, even with "on" saved.
+
+**Debug isolation.** Production bundle contains no probe code (0 matches for its identifiers). HUD appears only on dev/QA builds with `?introDebug`; never on production, never on the normal homepage.
+
+## Checkpoint — 2026-11-12 (M2 refined, awaiting review)
+- **Milestone:** M2 + refinement on `m2-introduction` (from `a73974e`), **uncommitted**, not pushed. `m1-visual-foundation` and `main` untouched.
+- **Latest commit on branch:** `a73974e`.
+- **Build/test:** typecheck ✓ · build ✓ (86 kB gzip JS) · functional suite ✓ · frame-accurate capture ✓ · audio capture ✓ · debug isolation ✓.
+- **Known issues:** hardware-GPU frame rate unverified in sandbox (probe provided) · sound character needs owner ear-test · draft copy / contact details as before.
+- **Exact next task:** owner reviews; on approval commit `feat(m2): …`, push `m2-introduction`, verify the Vercel preview on a real device.

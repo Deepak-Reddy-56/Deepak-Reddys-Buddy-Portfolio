@@ -58,3 +58,15 @@
     --buddy-size: 68px;
   }
 }
+
+/* ── Introduction hand-off (html[data-intro], set by the intro) ──
+   The hero Buddy stays hidden while the shader draws him, then takes over. */
+.slot {
+  transition: opacity 260ms var(--ease-in-out);
+}
+
+:global(html[data-intro='playing']) .hero .slot,
+:global(html[data-intro='leaving']) .hero .slot {
+  opacity: 0;
+  transition: none;
+}
