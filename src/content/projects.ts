@@ -184,14 +184,14 @@ export const projects: readonly PortfolioProject[] = [
     theme: 'phishing',
     visual: 'shield',
     description:
-      'A message-analysis project that evaluates suspicious content, highlights links, produces a risk rating and suggests a safer reply.',
+      'A browser-based phishing analyzer that combines local message and URL heuristics with an optional Gemini verdict, extracted-link review and safe-reply generation.',
     role: 'Security project',
     stack: ['JavaScript', 'Gemini API'],
     highlights: [
-      'Accepts suspicious message content for analysis.',
-      'Surfaces the links contained in a message.',
-      'Returns a risk rating and a suggested reply.',
-      'Designed to help a person inspect a message before acting on it.',
+      'Runs local heuristics for urgency, credential and payment requests, suspicious URL patterns and possible brand lookalikes.',
+      'Shows a risk meter with Low, Medium and High levels, plus the signals behind the score.',
+      'Can optionally request a Gemini analysis and generate a safe reply.',
+      'Extracts links and displays findings about hostnames and URL characteristics.',
     ],
     sections: [
       {
@@ -202,12 +202,12 @@ export const projects: readonly PortfolioProject[] = [
       {
         heading: 'The experience',
         body:
-          'The user supplies a suspicious message. The application returns an analysis with a risk rating, the links found in the message and a suggested response. The tool is intended as an aid to judgment, not a guarantee that a message is safe.',
+          'The user pastes an email, direct message or SMS. The local scan checks urgency, credential and financial language, punctuation, suspicious top-level domains, URL structure and possible lookalike brands. The risk meter and extracted-link panel make those signals visible.',
       },
       {
         heading: 'A practical boundary',
         body:
-          'A message analyzer can help draw attention to warning signs, but it cannot replace independent verification. Unexpected requests for credentials, payment or sensitive information should still be checked through a trusted channel.',
+          'Gemini analysis is optional; heuristic checks run locally in the browser. The repository includes a settings panel for the Gemini key and describes local browser storage as demo-only. A production version should proxy AI requests server-side and keep credentials out of client code. A risk score is a triage aid, not a guarantee that a message is safe.',
       },
     ],
     repo: 'https://github.com/Deepak-Reddy-56/Phishing-Shield',
@@ -294,7 +294,7 @@ export const projects: readonly PortfolioProject[] = [
           'This portfolio entry describes the structure and technology documented in the project repository. It does not claim production sales, customer numbers or deployment outcomes.',
       },
     ],
-    repo: 'https://github.com/Deepak-Reddy-56/Clara-Co',
+    repo: 'https://github.com/Deepak-Reddy-56/clara-co',
   },
 ];
 
