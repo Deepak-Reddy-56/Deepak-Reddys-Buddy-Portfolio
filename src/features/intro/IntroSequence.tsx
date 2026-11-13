@@ -241,10 +241,10 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish,
           ? Math.min(t, m.handoff[0])
           : m.handoff[0] + Math.min(handoffDuration, t - handoffStartedAt);
         const u = introUniforms(shaderTime, from, to, TERMINAL_RADIUS, !toThreeD, reducedMotion);
-        u.alpha = handoffStartedAt === null
-          ? 1
-          : 1 - Math.max(0, Math.min(1, (t - handoffStartedAt) / handoffDuration));
-        stage.set('u_time', t / 1000);
+        if (handoffStartedAt !== null) {
+          u.alpha = 1 - Math.max(0, Math.min(1, (t - handoffStartedAt) / handoffDuration));
+        }
+        stage.set('u_time', shaderTime / 1000);
         stage.set('u_center', u.center);
         stage.set('u_half', u.half);
         stage.set('u_radius', u.radius);

@@ -13,10 +13,9 @@ function setBuddyMode(mode: '3d' | null): void {
 }
 
 /**
- * Buddy's Paper skin and Three.js face are deliberately not mounted during
- * the terminal intro. This keeps their GPU contexts out of the shader compile
- * window. The JS module is preloaded only, so the intro knows the final target
- * is 3D without allocating a second renderer.
+ * Buddy's renderers are normally deferred during the intro to keep GPU use low.
+ * At the final reveal cue they are mounted behind the intro, warmed, and kept
+ * alive across the overlay removal so the shader Buddy can hand off seamlessly.
  */
 export function BuddyStage({
   menuOpen,
@@ -34,8 +33,7 @@ export function BuddyStage({
   const buddyRef = useRef<Buddy | null>(null);
   const readySent = useRef(false);
   const reducedMotion = useReducedMotion();
-  // Once prewarming starts, keep this value true when introActive flips false;
-  // that avoids tearing down a renderer that has just finished warming.
+  // Keep the renderers mounted when introActive becomes false after prewarming.
   const stageEnabled = !introActive || prepareForHandoff;
 
   useEffect(() => {
@@ -69,36 +67,28 @@ export function BuddyStage({
       return;
     }
 
-    {
-      let cancelled = false;
-      setBuddyMode(null);
-      import('./three/createBuddy')
-        .then(() => {
-          if (!cancelled) setBuddyMode('3d');
-        })
-        .catch(() => {
-          if (!cancelled) setBuddyMode(null);
-        });
-
-      return () => {
-        cancelled = true;
-        setBuddyMode(null);
-      };
-    }
-
     const canvas = canvasRef.current;
     const paperSkin = paperSkinRef.current;
-    if (!canvas || !paperSkin) return;
+    if (!canvas || !paperSkin) {
+      signalReady();
+      return;
+    }
+
     let cancelled = false;
     let buddy: Buddy | null = null;
 
-    const fallBack = () => {
+    const clearBuddy = () => {
       buddy?.dispose();
       buddy = null;
       buddyRef.current = null;
       if (paperSkin.isConnected) paperSkin.style.opacity = '0';
       setBuddyMode(null);
-      // A failed 3D/Paper renderer must not leave the intro waiting forever.
+    };
+
+    const fallBack = () => {
+      if (cancelled) return;
+      clearBuddy();
+      // A failed WebGL/Paper renderer must not leave the intro waiting forever.
       signalReady();
     };
 
@@ -116,7 +106,7 @@ export function BuddyStage({
 
     return () => {
       cancelled = true;
-      fallBack();
+      clearBuddy();
     };
   }, [reducedMotion, stageEnabled, onReady]);
 
