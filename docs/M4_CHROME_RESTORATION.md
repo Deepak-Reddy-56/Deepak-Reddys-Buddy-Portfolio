@@ -14,3 +14,7 @@
 - [ ] Forced intro replay shows the complete terminal-to-chrome-to-Buddy sequence.
 - [ ] Final 3D Buddy has the flowing chrome finish from the reference.
 - [ ] Owner reviews on desktop GPU and phone.
+
+
+## Review outcome — 2026-11-13
+The first M4 chrome environment experiment was rejected by the owner because the resulting transition was worse than Claude's prior M3 implementation. The two shared material files were restored exactly from `m3-buddy-character`. Keep the original M2 transition and prior M3 material as the baseline for the next dedicated transition pass.

@@ -237,3 +237,10 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Mirrored the same reflection field in the intro GLSL so the terminal's chrome transformation and the final 3D Buddy use the same material language.
 - No intro timing, terminal scene, narration, section interaction or flight code changed.
 - Build/preview verification pending.
+
+
+## 2026-11-13 — Revert experimental chrome environment
+- The experimental liquid reflection environment introduced in the previous M4 patch did not improve the terminal-to-Buddy transformation in the owner's review video.
+- Restored `src/features/buddy/three/studioEnvironment.ts` and `src/lib/webgl/glsl/chrome.ts` byte-for-byte from the approved `m3-buddy-character` branch, preserving Claude's prior M3 material implementation.
+- M4.1 narration and Buddy interactions remain in place. The M2 intro timeline, terminal scene, morph shader and sound engine were not changed by this revert.
+- Do not attempt further global environment/shader redesign as a shortcut. The next transition work must address shape continuity, deformation and shader-to-3D handoff directly, then be reviewed against the reference clip before merging.
