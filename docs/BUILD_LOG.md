@@ -252,3 +252,11 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Separated the timeline into two phases: (1) morph and resize at the exact terminal centre; (2) after the face forms, move that same chrome object to the hero seat for the existing 3D handoff.
 - No second Buddy is introduced. DOM terminal → shader morph → chrome Buddy → 3D Buddy remains the intended continuous visual chain.
 - Build and preview verification pending; owner review is required before calling the transition fixed.
+
+
+## 2026-11-13 — M4 correction: one object, one centre
+- Owner confirmed the Buddy still reads as a separate entrance after the earlier timing adjustment.
+- Root cause: the chrome form still travelled from the terminal's centre to the hero seat after the face appeared. The two centres differed vertically, making the Buddy look like a second object arriving below.
+- Removed centre interpolation from the intro. The same shader object now stays at the terminal's exact centre from takeover through chrome deformation and face formation.
+- At Run, measure the terminal and align the reserved hero seat to that exact centre. Dispatch a resize so BuddyDirector re-measures the changed target. This makes the shader → persistent 3D handoff occur in place.
+- Physical-device review remains necessary; deployment success alone does not verify the animation.

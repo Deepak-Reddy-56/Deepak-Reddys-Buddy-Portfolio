@@ -12,7 +12,6 @@ export const marks = {
   chrome: [700, 1450],
   morph: [820, 1920], // reshape and resize the terminal into a chrome pebble at its own centre
   face: [1930, 2450], // the face forms before the already-transformed Buddy travels
-  move: [2450, 3250], // then the same chrome object moves to its hero seat
   drops: [900, 2150],
   revealPage: [2350, 3150], // reveal the page as the formed Buddy makes its short flight
   blink: [2600, 2760],
@@ -43,11 +42,10 @@ export function boxFromRect(rect: DOMRect): Box {
 /**
  * `settleToCard`: end as an exact image of the CSS placeholder (static fallback).
  * When the 3D Buddy takes over instead, stay liquid chrome on his ellipsoid silhouette.
+ * The hero seat is aligned to this terminal centre before the animation starts.
  */
 export function introUniforms(t: number, from: Box, to: Box, radius: number, settleToCard = true): IntroUniforms {
-  // Separate transformation from travel: the terminal itself becomes Buddy in place,
-  // then that same object glides to the hero seat. Never spawn a second Buddy below it.
-  const move = easeInOutCubic(progress(t, ...marks.move));
+  // The terminal itself becomes Buddy at its source coordinates; it does not fly away.
   const form = easeInOutCubic(progress(t, ...marks.morph));
   const morph = form;
   const chrome = easeOutCubic(progress(t, ...marks.chrome));
@@ -73,7 +71,8 @@ export function introUniforms(t: number, from: Box, to: Box, radius: number, set
   const breathe = 1 + 0.035 * dampedWobble(breatheP, 1.5) * progress(t, 1900, 2100) * (1 - breatheP);
 
   return {
-    center: [lerp(from.cx, to.cx, move), lerp(from.cy, to.cy, move)],
+    // Keep the transforming object at the terminal's exact centre throughout.
+    center: [from.cx, from.cy],
     half: [lerp(from.hw, to.hw, form) * breathe, lerp(from.hh, to.hh, form) / breathe],
     radius,
     morph,

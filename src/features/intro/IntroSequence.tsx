@@ -134,12 +134,25 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     const stage = stageRef.current;
     const useShader = webgl && stage !== null && windowEl !== null && slot !== null;
 
-    const from: Box | null = windowEl ? boxFromRect(windowEl.getBoundingClientRect()) : null;
+    let from: Box | null = windowEl ? boxFromRect(windowEl.getBoundingClientRect()) : null;
     let to: Box | null = slot ? boxFromRect(slot.getBoundingClientRect()) : null;
-    const onResize = () => {
-      if (slot) to = boxFromRect(slot.getBoundingClientRect());
+    const heroSeat = slot?.closest<HTMLElement>('[data-buddy-seat="hero"]') ?? null;
+
+    // Keep the reserved 3D seat at the terminal's exact transformation origin.
+    // This prevents a second, lower Buddy from appearing after the shader morph.
+    const alignHeroSeat = () => {
+      if (!windowEl || !slot || !heroSeat) return;
+      from = boxFromRect(windowEl.getBoundingClientRect());
+      const before = slot.getBoundingClientRect();
+      heroSeat.style.setProperty('--buddy-intro-offset-x', `${from.cx - (before.left + before.width / 2)}px`);
+      heroSeat.style.setProperty('--buddy-intro-offset-y', `${from.cy - (before.top + before.height / 2)}px`);
+      to = boxFromRect(slot.getBoundingClientRect());
     };
+    const onResize = () => alignHeroSeat();
     window.addEventListener('resize', onResize);
+    alignHeroSeat();
+    // BuddyDirector measured the original seat at mount. Re-measure the aligned seat.
+    window.dispatchEvent(new Event('resize'));
 
     const m = useShader ? marks : fallbackMarks;
     // Hand-off target: the 3D Buddy (if it has loaded) or the static placeholder.
