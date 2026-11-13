@@ -263,3 +263,11 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 
 
 - Follow-up cleanup: the alignment resize listener is removed on every exit path (normal finish, skip, WebGL failure, or component unmount), avoiding a stale listener after the intro closes.
+
+
+## 2026-11-13 — Restore Claude M3 terminal-to-Buddy transition
+- Owner rejected the M4 centre-lock attempt: it still read as a separate Buddy appearance and did not match the approved M3 choreography.
+- Compared M3 commit `78fc956` with the M4 transition commits. M3 overlaps the rounded-terminal morph with the movement and scales the object on that same movement curve. M4 split those into a stationary morph and a later flight, which changed the visual effect.
+- Restored these files byte-for-byte from `m3-buddy-character`: `src/features/intro/introTimeline.ts`, `src/features/intro/IntroSequence.tsx`, and `src/components/buddy/BuddySeat.module.css`.
+- M4.1 interaction work remains untouched: narration catalogue, clickable headings/projects, tap reactions, expression variants, and voice controller stay on this branch.
+- Acceptance: inspect a frame-by-frame capture and the actual preview to confirm the terminal itself rounds, contracts, travels and becomes Buddy continuously; a successful compile alone is not enough.

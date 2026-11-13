@@ -57,7 +57,6 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
   const runRef = useRef<HTMLButtonElement>(null);
   const stageRef = useRef<ShaderStage | null>(null);
   const loopRef = useRef<FrameLoop | null>(null);
-  const resizeCleanupRef = useRef<(() => void) | null>(null);
   const stepRef = useRef<Step>('typing');
   const runId = useRef(`intro-${Math.random().toString(36).slice(2)}`);
   const finished = useRef(false);
@@ -71,8 +70,6 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     (reason: IntroEnd) => {
       if (finished.current) return;
       finished.current = true;
-      resizeCleanupRef.current?.();
-      resizeCleanupRef.current = null;
       if (reason === 'skip') buddyVoice.cancel();
       loopRef.current?.dispose();
       loopRef.current = null;
@@ -96,10 +93,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     return () => setIntroState(null);
   }, []);
 
-  useEffect(() => () => {
-    resizeCleanupRef.current?.();
-    loopRef.current?.dispose();
-  }, []);
+  useEffect(() => () => loopRef.current?.dispose(), []);
 
   // Scene A: the command types itself.
   useEffect(() => {
@@ -140,29 +134,12 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     const stage = stageRef.current;
     const useShader = webgl && stage !== null && windowEl !== null && slot !== null;
 
-    let from: Box | null = windowEl ? boxFromRect(windowEl.getBoundingClientRect()) : null;
+    const from: Box | null = windowEl ? boxFromRect(windowEl.getBoundingClientRect()) : null;
     let to: Box | null = slot ? boxFromRect(slot.getBoundingClientRect()) : null;
-    const heroSeat = slot?.closest<HTMLElement>('[data-buddy-seat="hero"]') ?? null;
-
-    // Keep the reserved 3D seat at the terminal's exact transformation origin.
-    // This prevents a second, lower Buddy from appearing after the shader morph.
-    const alignHeroSeat = () => {
-      if (!windowEl || !slot || !heroSeat) return;
-      // Remove the previous viewport-specific translation before measuring the base seat.
-      heroSeat.style.removeProperty('--buddy-intro-offset-x');
-      heroSeat.style.removeProperty('--buddy-intro-offset-y');
-      from = boxFromRect(windowEl.getBoundingClientRect());
-      const before = slot.getBoundingClientRect();
-      heroSeat.style.setProperty('--buddy-intro-offset-x', `${from.cx - (before.left + before.width / 2)}px`);
-      heroSeat.style.setProperty('--buddy-intro-offset-y', `${from.cy - (before.top + before.height / 2)}px`);
-      to = boxFromRect(slot.getBoundingClientRect());
+    const onResize = () => {
+      if (slot) to = boxFromRect(slot.getBoundingClientRect());
     };
-    const onResize = () => alignHeroSeat();
     window.addEventListener('resize', onResize);
-    resizeCleanupRef.current = () => window.removeEventListener('resize', onResize);
-    alignHeroSeat();
-    // BuddyDirector measured the original seat at mount. Re-measure the aligned seat.
-    window.dispatchEvent(new Event('resize'));
 
     const m = useShader ? marks : fallbackMarks;
     // Hand-off target: the 3D Buddy (if it has loaded) or the static placeholder.
@@ -213,12 +190,14 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
           stage.draw();
         } catch {
           // A failing GPU never leaves a blank screen: go straight to the page.
+          window.removeEventListener('resize', onResize);
           finish('done');
           return;
         }
       }
 
       if (t >= m.done) {
+        window.removeEventListener('resize', onResize);
         probe?.report(t);
         finish('done');
       }

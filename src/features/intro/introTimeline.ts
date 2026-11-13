@@ -10,11 +10,12 @@ export const marks = {
   swapStart: 560, // shader box appears under the DOM terminal
   swapEnd: 780, // DOM terminal fully gone; the shader carries on
   chrome: [700, 1450],
-  morph: [820, 1920], // reshape and resize the terminal into a chrome pebble at its own centre
-  face: [1930, 2450], // the face forms on the transformed terminal while it remains in place
+  morph: [820, 1800],
+  move: [1000, 2350],
   drops: [900, 2150],
-  revealPage: [2350, 3150], // reveal the page as the formed Buddy makes its short flight
-  blink: [2600, 2760],
+  face: [2250, 2700],
+  revealPage: [2350, 3050], // white overlay fades, homepage emerges around Buddy
+  blink: [3050, 3210],
   handoff: [3260, 3520], // shader → DOM placeholder crossfade
   done: 3560,
 } as const;
@@ -42,12 +43,11 @@ export function boxFromRect(rect: DOMRect): Box {
 /**
  * `settleToCard`: end as an exact image of the CSS placeholder (static fallback).
  * When the 3D Buddy takes over instead, stay liquid chrome on his ellipsoid silhouette.
- * The hero seat is aligned to this terminal centre before the animation starts.
  */
 export function introUniforms(t: number, from: Box, to: Box, radius: number, settleToCard = true): IntroUniforms {
-  // The terminal itself becomes Buddy at its source coordinates; it does not fly away.
-  const form = easeInOutCubic(progress(t, ...marks.morph));
-  const morph = form;
+  const move = easeInOutCubic(progress(t, ...marks.move));
+  const size = easeOutBack(progress(t, ...marks.move), 0.9);
+  const morph = easeInOutCubic(progress(t, ...marks.morph));
   const chrome = easeOutCubic(progress(t, ...marks.chrome));
 
   // Agitation rises as the glass turns to metal, then settles with a wobble.
@@ -71,9 +71,8 @@ export function introUniforms(t: number, from: Box, to: Box, radius: number, set
   const breathe = 1 + 0.035 * dampedWobble(breatheP, 1.5) * progress(t, 1900, 2100) * (1 - breatheP);
 
   return {
-    // Keep the transforming object at the terminal's exact centre throughout.
-    center: [from.cx, from.cy],
-    half: [lerp(from.hw, to.hw, form) * breathe, lerp(from.hh, to.hh, form) / breathe],
+    center: [lerp(from.cx, to.cx, move), lerp(from.cy, to.cy, move)],
+    half: [lerp(from.hw, to.hw, size) * breathe, lerp(from.hh, to.hh, size) / breathe],
     radius,
     morph,
     liquid,

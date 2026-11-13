@@ -22,9 +22,6 @@
   flex-direction: column;
   gap: clamp(20px, 2vw, 28px);
   text-align: center;
-
-  /* Keep the final 3D seat on the terminal's exact intro transformation origin. */
-  transform: translate3d(var(--buddy-intro-offset-x, 0px), var(--buddy-intro-offset-y, 0px), 0);
 }
 
 .hero .line {

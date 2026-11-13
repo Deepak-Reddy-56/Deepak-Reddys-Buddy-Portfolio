@@ -22,3 +22,7 @@ The first M4 chrome environment experiment was rejected by the owner because the
 
 ## Transition sequencing correction — 2026-11-13
 The terminal is the source object, not a prompt before a separate Buddy entrance. The shader now holds the exact terminal centre while changing its dimensions and geometry into the chrome pebble and revealing its face. Only after the Buddy form is visible does that same object move to the reserved hero seat. The final shader-to-3D handoff remains at hero-seat coordinates.
+
+
+## Transition baseline restored — 2026-11-13
+The attempted M4 centre-locked transition was removed. The approved Claude M3 transition is restored byte-for-byte in `introTimeline.ts`, `IntroSequence.tsx`, and `BuddySeat.module.css`. Its overlapping morph + travel + scale choreography is the transition baseline. M4's interaction and narration features remain layered on top of it.
