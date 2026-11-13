@@ -244,7 +244,6 @@ export class ShaderStage {
     return program;
   }
 }
-}
 
 /** Cheap capability probe; does not keep a context alive. */
 export function supportsWebGL(): boolean {
