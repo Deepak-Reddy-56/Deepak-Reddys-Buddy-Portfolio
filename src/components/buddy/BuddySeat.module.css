@@ -65,8 +65,7 @@
   transition: opacity 260ms var(--ease-in-out);
 }
 
-:global(html[data-intro='playing']) .hero .slot,
-:global(html[data-intro='leaving']) .hero .slot {
+:global(html[data-intro]) .hero .slot {
   opacity: 0;
   transition: none;
 }

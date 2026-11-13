@@ -170,7 +170,7 @@ export class BuddyDirector {
 
   private introPlaying(): boolean {
     const state = document.documentElement.dataset.intro;
-    return state === 'playing' || state === 'leaving';
+    return state === 'playing' || state === 'leaving' || state === 'handoff';
   }
 
   private wake(): void {
@@ -396,7 +396,7 @@ export class BuddyDirector {
       const k = Math.round(this.J);
       if (Math.abs(this.J - k) < 0.002) seatId = this.seats[k]?.id ?? null;
     }
-    if (this.dormant && document.documentElement.dataset.intro === 'leaving') seatId = this.seats[0]?.id ?? null;
+    if (this.dormant && (document.documentElement.dataset.intro === 'leaving' || document.documentElement.dataset.intro === 'handoff')) seatId = this.seats[0]?.id ?? null;
     if (!seated && !wantMenu) seatId = null;
     if (seatId !== this.activeSeat) this.activate(seatId, now);
 

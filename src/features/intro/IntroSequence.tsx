@@ -152,7 +152,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
 
     // Do not start the fallback timeline while the real shader is compiling.
     // Queue the visitor's Enter/click and replay it after the ready/failure result.
-    if (!reducedMotion && webgl && (!shaderReady || stageRef.current === null)) {
+    if (webgl && (!shaderReady || stageRef.current === null)) {
       pendingRun.current = true;
       return;
     }
@@ -162,10 +162,8 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     soundEngine.play('enter');
     setTyped(COMMAND.length);
 
-    if (reducedMotion) {
-      finish('done');
-      return;
-    }
+    // Run is an explicit user action: keep the shape morph even when the OS
+    // requests reduced motion, but remove surface wobble, breathing and blink.
     goTo('running');
 
     const windowEl = windowRef.current;
@@ -216,7 +214,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
         // "Hey, I'm Buddy!" — once per run, only with sound on (the run itself was the gesture).
         // Asked for a little before the face finishes forming: engines take ~50–300 ms to start.
         once('speak', t >= marks.face[0] + 60, () => buddyVoice.sayOnce(runId.current, spokenIntro));
-        const u = introUniforms(t, from, to, TERMINAL_RADIUS, !toThreeD);
+        const u = introUniforms(t, from, to, TERMINAL_RADIUS, !toThreeD, reducedMotion);
         stage.set('u_time', t / 1000);
         stage.set('u_center', u.center);
         stage.set('u_half', u.half);

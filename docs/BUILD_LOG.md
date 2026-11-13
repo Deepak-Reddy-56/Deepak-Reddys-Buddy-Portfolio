@@ -303,3 +303,19 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 
 ### Validation still required
 - Vercel typecheck/production build and a real browser check of the WebGL context, compile status and terminal-to-Buddy hand-off.
+## 2026-11-13 — Fix the legacy Buddy hand-off that overlaid the morph
+
+### Root cause confirmed in the current branch
+- `IntroSequence` changes `document.documentElement.dataset.intro` from `leaving` to `handoff` at the start of the final 280 ms shader fade (`3400–3680 ms`).
+- The hero seat CSS and BuddyStage CSS only hid their DOM/Three.js/Paper layers for `playing` and `leaving`, not `handoff`. At the exact moment the morph began fading, the placeholder and persistent Buddy renderer were therefore allowed to appear underneath/over the morph.
+- `BuddyDirector.introPlaying()` also returned false for `handoff`, so its MutationObserver woke the persistent renderer during that same fade. This was the stale legacy path that made Buddy reappear before the morph had finished.
+- A second path skipped the morph completely when `prefers-reduced-motion: reduce` was true: `run()` immediately called `finish('done')`.
+
+### Changes
+- Keep the hero placeholder, Paper skin and Three.js canvas hidden for every non-null `data-intro` state, including `handoff`. The intro shader is the only visible Buddy until the final frame.
+- Keep `BuddyDirector` dormant through `handoff`; it wakes only after the intro removes `data-intro` at completion.
+- End the timeline on the exact frame the shader's hand-off alpha reaches zero (`done=3680`, matching `handoff[1]`).
+- Do not silently skip the morph on an explicit Run click when reduced motion is enabled. The same shape transformation still plays, but surface agitation, breathing and blink are suppressed.
+
+### Validation
+- Vercel production build and deployment required. Browser-level visual verification remains necessary to validate the final crossfade on the user's device.

@@ -17,7 +17,7 @@ export const marks = {
   revealPage: [2670, 3300],
   blink: [3160, 3320],
   handoff: [3400, 3680],
-  done: 3740,
+  done: 3680,
 } as const;
 
 export type Box = { cx: number; cy: number; hw: number; hh: number };
@@ -43,20 +43,20 @@ export function boxFromRect(rect: DOMRect): Box {
 /** Body changes shape and dimensions in place. Eyes form after the body,
  * then the smile follows; neither uses overshooting easing.
  */
-export function introUniforms(t: number, from: Box, to: Box, radius: number, settleToCard = true): IntroUniforms {
+export function introUniforms(t: number, from: Box, to: Box, radius: number, settleToCard = true, reducedMotion = false): IntroUniforms {
   const morph = easeInOutCubic(progress(t, ...marks.morph));
   const chrome = easeOutCubic(progress(t, ...marks.chrome));
   const rise = easeOutCubic(progress(t, 700, 1150));
   const calm = progress(t, 1150, 2700);
-  const liquid = rise * Math.max(0, 1 - calm) * (0.72 + 0.18 * dampedWobble(calm));
+  const liquid = reducedMotion ? 0 : rise * Math.max(0, 1 - calm) * (0.72 + 0.18 * dampedWobble(calm));
   const face = easeOutCubic(progress(t, ...marks.face));
   const smile = easeOutCubic(progress(t, ...marks.smile));
   const blinkP = progress(t, ...marks.blink);
-  const blink = blinkP > 0 && blinkP < 1 ? Math.sin(Math.PI * blinkP) : 0;
+  const blink = !reducedMotion && blinkP > 0 && blinkP < 1 ? Math.sin(Math.PI * blinkP) : 0;
   const settle = settleToCard ? easeInOutCubic(progress(t, marks.face[0] - 350, marks.handoff[0])) : 0;
   const alpha = t < marks.swapStart ? 0 : 1 - progress(t, ...marks.handoff);
   const breatheP = progress(t, 2100, 3300);
-  const breathe = 1 + 0.012 * dampedWobble(breatheP, 1.5) * progress(t, 2050, 2200) * (1 - breatheP);
+  const breathe = reducedMotion ? 1 : 1 + 0.012 * dampedWobble(breatheP, 1.5) * progress(t, 2050, 2200) * (1 - breatheP);
   return {
     center: [from.cx, from.cy],
     half: [lerp(from.hw, to.hw, morph) * breathe, lerp(from.hh, to.hh, morph) / breathe],

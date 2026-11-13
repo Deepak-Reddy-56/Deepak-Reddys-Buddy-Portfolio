@@ -47,10 +47,8 @@
 }
 
 /* The intro draws Buddy itself until the hand-off. */
-:global(html[data-intro='playing']) .canvas,
-:global(html[data-intro='leaving']) .canvas,
-:global(html[data-intro='playing']) .paperSkin,
-:global(html[data-intro='leaving']) .paperSkin {
+:global(html[data-intro]) .canvas,
+:global(html[data-intro]) .paperSkin {
   opacity: 0;
   transition: none;
 }
