@@ -71,7 +71,7 @@ export function BuddyStage({ menuOpen }: { menuOpen: boolean }) {
           height="100%"
           image="/buddy-mask.svg"
           shape="none"
-          colorBack="#AAAAAC"
+          colorBack="#AAAAAC00"
           colorTint="#FFFFFF"
           repetition={2}
           softness={0.1}
@@ -81,7 +81,7 @@ export function BuddyStage({ menuOpen }: { menuOpen: boolean }) {
           contour={0.4}
           angle={70}
           speed={0.85}
-          scale={0.68}
+          scale={1}
           fit="contain"
           minPixelRatio={1.25}
           maxPixelCount={900000}

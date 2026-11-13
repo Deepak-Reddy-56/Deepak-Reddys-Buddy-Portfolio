@@ -260,3 +260,10 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Check that the SVG mask is transparent outside the Buddy silhouette, Paper's canvas initializes in supported browsers, and the eyes/mouth layer stays registered while Buddy moves.
 - Test loss of the Paper context: the physical Three.js body should reappear, leaving Buddy visible.
 - Test mobile and reduced-motion paths. Reduced-motion continues to use the existing static placeholders and does not mount either Buddy shader.
+
+## 2026-11-13 — Remove Paper shader backing rectangles
+
+- Root cause confirmed in the Paper Liquid Metal fragment shader: the alpha channel of `u_colorBack` controls opacity in transparent portions of an image mask. An opaque `#AAAAAC` therefore filled the entire Buddy shader canvas behind the silhouette.
+- Changed Buddy's `colorBack` to `#AAAAAC00` so the Liquid Metal mask is transparent outside Buddy's SVG silhouette.
+- Changed the terminal's full-canvas `shape="none"` scale from `0.72` to `1`, matching Paper's published full-screen preset and removing the inset material viewport inside the outer terminal window.
+- Set the Buddy material scale to `1` so its stripes/pattern fill the masked body rather than appearing unnecessarily zoomed out.

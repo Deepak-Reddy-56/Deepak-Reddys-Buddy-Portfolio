@@ -57,7 +57,7 @@ export function TerminalScene({
             contour={0.4}
             angle={70}
             speed={0.7}
-            scale={0.72}
+            scale={1}
             fit="contain"
             minPixelRatio={1.25}
             maxPixelCount={1600000}
