@@ -207,3 +207,24 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
   - Preview is behind Vercel Deployment Protection (as in M2); rendered output on the preview not verified from the sandbox.
 - **Known issues:** GPU frame rate, real-device scroll feel and real TTS audio unverified (sandbox: software rendering, no voices) · mobile mid-flight runs just off screen (20 px margins).
 - **Exact next task:** owner checks the preview on real devices; then plan M4 (homepage storytelling and interactive project carousel) for approval.
+
+
+## 2026-11-13 — Adam Perlis 2026 rebuild: first implementation pass
+
+### Source basis
+- Re-read the current live site and the complete “How I built this” article.
+- The article's central design rules are now explicit: white space over cards, one floating pill control, light grey screenshot mats, one primary action per screen, one liquid/chrome material travelling through the story, and Buddy as a guide who occupies reserved seats rather than a chat widget.
+- The home page's work experience is a carousel; project pages must show actual product evidence. The showreel is a later frame-deterministic HTML/CSS scene render, not a screen recording.
+- This implementation stays on the React/Vite M3 base rather than migrating to Astro only for stack similarity.
+
+### Implemented
+- Replaced the separate floating circular controls with one compact top-right pill containing Home, Sound and Menu; when the menu opens it moves inward to the sheet's safe margin.
+- Replaced the generic two-column project list with a horizontally scrollable carousel. It supports native touch/trackpad scrolling, keyboard focus, previous/next controls, centered snapping and a three-copy loop with re-basing at the boundaries.
+- Added six original CSS/HTML interface studies, one per verified project: BMS lifecycle ledger, LotLens investigation, SentinelLog activity console, Phishing Shield message analysis, CampusCopilot terminal/map, and Clara & Co storefront.
+- The project artwork is clearly identified as an original interface concept, not a screenshot of a deployed app. No Adam Perlis assets, logos, fonts or product imagery were copied.
+- Corrected the Clara & Co repository link to the verified clara-co URL and refined team-project context to avoid solo-work attribution.
+
+### Validation still required
+- Run npm run typecheck and npm run build on the branch.
+- Review the Vercel branch preview at desktop and phone widths; carousel wrap, menu position and 3D Buddy flight must be checked together.
+- Real UI captures from the actual projects and a deterministic code-built reel are later tasks; current interface studies are visual placeholders for the carousel structure, not final product captures.

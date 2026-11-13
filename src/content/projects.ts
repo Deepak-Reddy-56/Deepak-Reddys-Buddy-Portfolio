@@ -1,22 +1,14 @@
 /**
- * Project index for M1. Every field below was taken from the project's own
- * repository (README, package.json, requirements.txt or file structure) on
- * 2026-11-12. Do not add roles, metrics, users or outcomes that the repos do
- * not state. Detailed case studies arrive in M5, after review with Deepak.
- *
- * Not yet listed: VROOM and InternPilot (repositories not found under
- * github.com/Deepak-Reddy-56 with those names).
+ * Project index. Descriptions, team context and status are grounded in each
+ * project's own repository. Interface artwork is an original visual study,
+ * not a screenshot of a deployed product.
  */
 export type Project = {
   slug: string;
   name: string;
-  /** One sentence, grounded in the repository. */
   summary: string;
-  /** Stack as declared in the repository. */
   stack: string[];
-  /** Context the repository itself states, e.g. team size. */
   context?: string;
-  /** Only set when the repository states it. */
   status?: 'Development build';
   repo: string;
 };
@@ -28,7 +20,7 @@ export const projects: readonly Project[] = [
     summary:
       'Records a component’s lifecycle on a permissioned Fabric ledger, from manufacture and certification to shipping, custody transfer and assembly.',
     stack: ['Hyperledger Fabric', 'React', 'Node.js', 'MongoDB Atlas'],
-    context: 'Team of five',
+    context: 'Team project · five contributors',
     repo: 'https://github.com/Deepak-Reddy-56/secure-bms-provenance',
   },
   {
@@ -62,7 +54,7 @@ export const projects: readonly Project[] = [
     summary:
       'A command-line university assistant with fuzzy-matched commands, pandas analytics, charts, a campus map and classic DSA under the hood.',
     stack: ['Python', 'pandas', 'matplotlib', 'Folium'],
-    context: 'Five-hour hackathon, team of five',
+    context: 'Five-hour hackathon · team of five',
     repo: 'https://github.com/Deepak-Reddy-56/CampusCopilot',
   },
   {
@@ -70,6 +62,6 @@ export const projects: readonly Project[] = [
     name: 'Clara & Co.',
     summary: 'An e-commerce storefront with shop, product, search, checkout, account and admin sections.',
     stack: ['Next.js', 'React', 'Firebase', 'Tailwind CSS'],
-    repo: 'https://github.com/Deepak-Reddy-56/Clara-Co',
+    repo: 'https://github.com/Deepak-Reddy-56/clara-co',
   },
 ];

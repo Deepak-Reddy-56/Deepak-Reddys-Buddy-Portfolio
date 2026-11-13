@@ -28,7 +28,7 @@ The goal is not a static résumé page. The experience should feel like a small 
 - [~] M1 — Reference study, visual system, and responsive shell (implemented, awaiting review)
 - [ ] M2 — Entry sequence: terminal interaction and first reveal
 - [ ] M3 — Buddy character prototype and motion language
-- [ ] M4 — Story-led home page and project showcase
+- [~] M4 — Story-led home page and interactive project showcase (first implementation pass)
 - [ ] M5 — Individual work / case-study pages
 - [ ] M6 — Interactive Buddy playground
 - [ ] M7 — About, skills, and contact experiences

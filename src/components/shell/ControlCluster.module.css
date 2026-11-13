@@ -1,76 +1,75 @@
 .cluster {
   position: fixed;
   z-index: var(--z-controls);
-  top: var(--control-top);
-  left: 0;
-  right: var(--scrollbar-comp);
+  top: 16px;
+  right: calc(20px + var(--scrollbar-comp));
   display: flex;
-  justify-content: center;
-  pointer-events: none; /* only the buttons are interactive */
+  justify-content: flex-end;
+  pointer-events: none;
+  transition: top var(--dur-menu-open) var(--ease-out), right var(--dur-menu-open) var(--ease-out);
 }
 
 .controls {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
   pointer-events: auto;
-  transition: transform var(--dur-menu-close) var(--ease-in-out);
+  border: 1px solid rgba(17,17,17,.045);
+  border-radius: var(--radius-pill);
+  background: rgba(255,255,255,.96);
+  box-shadow: var(--shadow-control);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
-/* When the sheet opens, the cluster settles inside it, like a toolbar. */
-.cluster[data-menu='open'] .controls {
-  transform: translateY(var(--menu-drop, 28px));
-  transition: transform var(--dur-menu-open) var(--ease-out);
-}
-
-@media (max-width: 640px) {
-  .cluster {
-    --menu-drop: 16px;
-  }
+.cluster[data-menu='open'] {
+  top: 28px;
+  right: calc(28px + var(--scrollbar-comp));
 }
 
 .control {
   display: grid;
   place-items: center;
-  width: var(--control-size);
-  height: var(--control-size);
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-pill);
-  background: var(--color-bg);
   color: var(--color-ink);
-  box-shadow: var(--shadow-control);
-  transition:
-    box-shadow var(--dur-base) var(--ease-out),
-    transform var(--dur-base) var(--ease-out);
+  transition: background-color var(--dur-base) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
-.control:focus-visible {
-  border-radius: var(--radius-pill);
+.control[aria-pressed='false'] { color: var(--color-ink-2); }
+
+@media (hover:hover) {
+  .control:hover { background: var(--color-surface); }
 }
 
-@media (hover: hover) {
-  .control:hover {
-    box-shadow: var(--shadow-control-hover);
-    transform: translateY(-1px);
-  }
-}
-
-.control:active {
-  transform: scale(0.95);
-  transition-duration: var(--dur-instant);
-}
-
-.control[aria-pressed='false'] {
-  color: var(--color-ink-2);
-}
-
-/* The menu control is a wider pill with two lines that fold into an X. */
 .menuButton {
-  width: calc(var(--control-size) + 16px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 78px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  color: var(--color-ink);
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+
+@media (hover:hover) {
+  .menuButton:hover { background: var(--color-surface); }
+}
+
+.menuLabel {
+  font-size: var(--text-sm);
+  line-height: 1;
 }
 
 .burger {
   position: relative;
   display: block;
-  width: 18px;
+  width: 13px;
   height: 8px;
 }
 
@@ -78,41 +77,33 @@
   position: absolute;
   left: 0;
   width: 100%;
-  height: 1.6px;
+  height: 1.4px;
   border-radius: 2px;
   background: currentColor;
-  transition:
-    transform var(--dur-slow) var(--ease-out),
-    top var(--dur-slow) var(--ease-out);
+  transition: transform var(--dur-slow) var(--ease-out), top var(--dur-slow) var(--ease-out);
 }
 
-.burger span:first-child {
-  top: 0;
-}
-
-.burger span:last-child {
-  top: calc(100% - 1.6px);
-}
+.burger span:first-child { top: 0; }
+.burger span:last-child { top: calc(100% - 1.4px); }
 
 .cluster[data-menu='open'] .burger span:first-child {
-  top: calc(50% - 0.8px);
-  transform: rotate(45deg) scaleX(0.92);
+  top: calc(50% - .7px);
+  transform: rotate(45deg) scaleX(.92);
 }
-
 .cluster[data-menu='open'] .burger span:last-child {
-  top: calc(50% - 0.8px);
-  transform: rotate(-45deg) scaleX(0.92);
+  top: calc(50% - .7px);
+  transform: rotate(-45deg) scaleX(.92);
 }
 
-/* Intro: the cluster drops in as the page is revealed. */
 .controls {
-  transition:
-    transform var(--dur-menu-close) var(--ease-in-out),
-    opacity 600ms var(--ease-out);
+  transition: opacity 600ms var(--ease-out);
 }
-
 :global(html[data-intro='playing']) .controls {
   opacity: 0;
-  transform: translateY(-10px);
   transition: none;
+}
+
+@media(max-width:640px) {
+  .cluster { top: 12px; right: calc(12px + var(--scrollbar-comp)); }
+  .cluster[data-menu='open'] { top: 16px; right: calc(16px + var(--scrollbar-comp)); }
 }

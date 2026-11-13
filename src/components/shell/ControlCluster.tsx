@@ -12,10 +12,7 @@ type ControlClusterProps = {
   menuButtonRef: RefObject<HTMLButtonElement | null>;
 };
 
-/**
- * The fixed, centred control cluster: Home · Sound · Menu.
- * Sits above the menu sheet, so the menu button doubles as Close.
- */
+/** One quiet floating pill: home, sound and the menu live in a single control. */
 export function ControlCluster({
   menuPhase,
   onToggleMenu,
@@ -29,8 +26,8 @@ export function ControlCluster({
   return (
     <header className={styles.cluster} data-menu={menuPhase}>
       <nav className={styles.controls} aria-label="Site controls">
-        <a href="#home" className={styles.control} onClick={onHome} aria-label="Home">
-          <Icon name="home" size={17} />
+        <a href="#home" className={styles.control} onClick={onHome} aria-label="Home" title="Home">
+          <Icon name="home" size={16} />
         </a>
         <button
           type="button"
@@ -40,17 +37,18 @@ export function ControlCluster({
           aria-label="Sound"
           title={soundEnabled ? 'Sound on' : 'Sound off'}
         >
-          <Icon name={soundEnabled ? 'sound-on' : 'sound-off'} size={17} />
+          <Icon name={soundEnabled ? 'sound-on' : 'sound-off'} size={16} />
         </button>
         <button
           ref={menuButtonRef}
           type="button"
-          className={`${styles.control} ${styles.menuButton}`}
+          className={styles.menuButton}
           onClick={onToggleMenu}
           aria-expanded={menuOpen}
           aria-controls="site-menu"
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
         >
+          <span className={styles.menuLabel}>{menuOpen ? 'Close' : 'Menu'}</span>
           <span className={styles.burger} aria-hidden="true">
             <span />
             <span />
