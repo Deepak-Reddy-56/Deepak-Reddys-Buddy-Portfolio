@@ -23,7 +23,10 @@ export class BuddyRenderer {
   private readonly env: Texture;
   private readonly paperSkin: HTMLDivElement | null;
   private readonly paperSkinObserver: MutationObserver | null;
+  private readonly onPaperSkinReady?: () => void;
   private paperSkinActive = false;
+  private paperSkinReadyReported = false;
+  private disposed = false;
   private paperPosition = { x: 0, y: 0, size: 0 };
   private lastPose: BuddyPose = { bank: 0, pitch: 0, yaw: 0, stretch: 1, bob: 0, flying: 0 };
   private width = 0;
@@ -32,8 +35,14 @@ export class BuddyRenderer {
   private box = { x: 0, y: 0, w: 0, h: 0 };
   private lastBox = { x: 0, y: 0, w: 0, h: 0 };
 
-  constructor(canvas: HTMLCanvasElement, onContextLost: () => void, paperSkin: HTMLDivElement | null = null) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    onContextLost: () => void,
+    paperSkin: HTMLDivElement | null = null,
+    onPaperSkinReady?: () => void,
+  ) {
     this.paperSkin = paperSkin;
+    this.onPaperSkinReady = onPaperSkinReady;
     this.paperSkinObserver = paperSkin ? new MutationObserver(() => this.syncPaperSkin()) : null;
     this.paperSkinObserver?.observe(paperSkin!, { childList: true, subtree: true });
     this.renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
@@ -101,6 +110,13 @@ export class BuddyRenderer {
     if (ready && this.paperPosition.size > 0) {
       this.positionPaperSkin(this.lastPose);
       this.paperSkin.style.opacity = '1';
+      if (!this.paperSkinReadyReported) {
+        this.paperSkinReadyReported = true;
+        // Let the Paper shader paint while still hidden behind the intro layer.
+        window.setTimeout(() => {
+          if (!this.disposed) this.onPaperSkinReady?.();
+        }, 240);
+      }
     } else {
       this.paperSkin.style.opacity = '0';
     }
@@ -143,12 +159,14 @@ export class BuddyRenderer {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.paperSkinObserver?.disconnect();
     if (this.paperSkin) this.paperSkin.style.opacity = '0';
     this.model.setPaperSkinActive(false);
     this.model.dispose();
     this.env.dispose();
-    // Dispose renderer resources but keep the canvas context reusable. React
+    this.renderer.dispose();
+    // Keep the canvas context reusable. React
     // Strict Mode may immediately recreate the renderer on this same canvas.
     // The browser can reclaim the context when the canvas is actually removed.
   }

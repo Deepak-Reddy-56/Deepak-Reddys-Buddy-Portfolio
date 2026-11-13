@@ -9,8 +9,9 @@ export function createBuddy(
   canvas: HTMLCanvasElement,
   onContextLost: () => void,
   paperSkin: HTMLDivElement | null = null,
+  onPaperSkinReady?: () => void,
 ) {
-  const renderer = new BuddyRenderer(canvas, onContextLost, paperSkin);
+  const renderer = new BuddyRenderer(canvas, onContextLost, paperSkin, onPaperSkinReady);
   const director = new BuddyDirector(renderer);
   return {
     director,

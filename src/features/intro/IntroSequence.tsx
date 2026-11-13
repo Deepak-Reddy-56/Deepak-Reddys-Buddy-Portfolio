@@ -21,6 +21,8 @@ type IntroSequenceProps = {
   soundSupported: boolean;
   onSound: (on: boolean) => void;
   onFinish: (reason: IntroEnd) => void;
+  onPrepareHandoff: () => void;
+  buddyReady: boolean;
 };
 
 const TERMINAL_RADIUS = 22;
@@ -54,7 +56,7 @@ function setIntroState(value: 'playing' | 'leaving' | 'handoff' | null): void {
  *   C  the liquid settles into Buddy, exactly where the homepage keeps him,
  *      while the page fades up around him; then the DOM Buddy takes over.
  */
-export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish }: IntroSequenceProps) {
+export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish, onPrepareHandoff, buddyReady }: IntroSequenceProps) {
   const reducedMotion = useReducedMotion();
   const [step, setStep] = useState<Step>('typing');
   const [typed, setTyped] = useState(0);
@@ -77,6 +79,8 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
   const finished = useRef(false);
   const pendingRun = useRef(false);
   const runAction = useRef<() => void>(() => {});
+  const buddyReadyRef = useRef(buddyReady);
+  buddyReadyRef.current = buddyReady;
 
   const goTo = useCallback((next: Step) => {
     stepRef.current = next;
@@ -205,6 +209,8 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
 
     const probe = introDebugEnabled ? createTimingProbe() : null;
     let shaderFrameVisible = false;
+    let handoffStartedAt: number | null = null;
+    const handoffDuration = m.handoff[1] - m.handoff[0];
 
     const loop = new FrameLoop((t) => {
       probe?.frame(t);
@@ -213,17 +219,31 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       once('startup', t >= (useShader ? marks.chrome[0] : 300), () => soundEngine.play('startup'));
       once('swap', t >= m.swapStart, () => setHandedOff(true));
       once('reveal', t >= m.revealPage[0], () => {
+        // Start the real page Buddy while the finished shader Buddy is still visible.
+        onPrepareHandoff();
         goTo('leaving');
         setIntroState('leaving');
       });
-      once('handoff', t >= m.handoff[0], () => setIntroState('handoff'));
+
+      // Keep the finished liquid Buddy fully opaque until the replacement has
+      // mounted its Three.js face and Paper chrome canvas and has had a frame to warm.
+      if (handoffStartedAt === null && t >= m.handoff[0] && buddyReadyRef.current) {
+        handoffStartedAt = t;
+        setIntroState('handoff');
+      }
 
       if (useShader && stage && from && to && stageRef.current === stage) {
         once('blip', t >= marks.face[0] + 120, () => soundEngine.play('blip'));
         // "Hey, I'm Buddy!" — once per run, only with sound on (the run itself was the gesture).
         // Asked for a little before the face finishes forming: engines take ~50–300 ms to start.
         once('speak', t >= marks.face[0] + 60, () => buddyVoice.sayOnce(runId.current, spokenIntro));
-        const u = introUniforms(t, from, to, TERMINAL_RADIUS, !toThreeD, reducedMotion);
+        const shaderTime = handoffStartedAt === null
+          ? Math.min(t, m.handoff[0])
+          : m.handoff[0] + Math.min(handoffDuration, t - handoffStartedAt);
+        const u = introUniforms(shaderTime, from, to, TERMINAL_RADIUS, !toThreeD, reducedMotion);
+        u.alpha = handoffStartedAt === null
+          ? 1
+          : 1 - Math.max(0, Math.min(1, (t - handoffStartedAt) / handoffDuration));
         stage.set('u_time', t / 1000);
         stage.set('u_center', u.center);
         stage.set('u_half', u.half);
@@ -252,7 +272,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
         }
       }
 
-      if (t >= m.done) {
+      if (handoffStartedAt !== null && t - handoffStartedAt >= handoffDuration) {
         window.removeEventListener('resize', onResize);
         probe?.report(t);
         finish('done');
@@ -260,7 +280,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     });
     loopRef.current = loop;
     loop.start();
-  }, [reducedMotion, webgl, shaderReady, finish, goTo, markUnavailable]);
+  }, [reducedMotion, webgl, shaderReady, finish, goTo, markUnavailable, onPrepareHandoff]);
 
   // Keep the latest run callback without capturing an obsolete state snapshot.
   runAction.current = run;
