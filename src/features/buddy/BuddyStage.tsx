@@ -13,20 +13,43 @@ function setBuddyMode(mode: '3d' | null): void {
 }
 
 /**
- * Buddy's body uses Paper's Liquid Metal shader, clipped to a transparent
- * pebble mask. Three.js remains responsible for eyes, mouth, blink, speech,
- * pose and flight; its canvas is layered above this shader skin.
+ * Buddy's Paper skin and Three.js face are deliberately not mounted during
+ * the terminal intro. This keeps their GPU contexts out of the shader compile
+ * window. The JS module is preloaded only, so the intro knows the final target
+ * is 3D without allocating a second renderer.
  */
-export function BuddyStage({ menuOpen }: { menuOpen: boolean }) {
+export function BuddyStage({ menuOpen, introActive }: { menuOpen: boolean; introActive: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paperSkinRef = useRef<HTMLDivElement>(null);
   const buddyRef = useRef<Buddy | null>(null);
   const reducedMotion = useReducedMotion();
 
   useEffect(() => {
+    if (reducedMotion) {
+      setBuddyMode(null);
+      return;
+    }
+
+    if (introActive) {
+      let cancelled = false;
+      setBuddyMode(null);
+      import('./three/createBuddy')
+        .then(() => {
+          if (!cancelled) setBuddyMode('3d');
+        })
+        .catch(() => {
+          if (!cancelled) setBuddyMode(null);
+        });
+
+      return () => {
+        cancelled = true;
+        setBuddyMode(null);
+      };
+    }
+
     const canvas = canvasRef.current;
     const paperSkin = paperSkinRef.current;
-    if (!canvas || !paperSkin || reducedMotion) return;
+    if (!canvas || !paperSkin) return;
     let cancelled = false;
     let buddy: Buddy | null = null;
 
@@ -54,13 +77,13 @@ export function BuddyStage({ menuOpen }: { menuOpen: boolean }) {
       cancelled = true;
       fallBack();
     };
-  }, [reducedMotion]);
+  }, [reducedMotion, introActive]);
 
   useEffect(() => {
     buddyRef.current?.director.setMenuOpen(menuOpen);
   }, [menuOpen]);
 
-  if (reducedMotion) return null;
+  if (reducedMotion || introActive) return null;
 
   return (
     <>

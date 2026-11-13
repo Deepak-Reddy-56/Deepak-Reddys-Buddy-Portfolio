@@ -344,3 +344,18 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 
 ### Validation
 - Vercel production build and runtime pixel-readback check are required.
+## 2026-11-13 — Reduce intro GPU contexts and expose actual shader diagnostics
+
+### Likely cause of `Shader compile failed: unknown error`
+- The previous compile helper used `getShaderInfoLog(shader) ?? 'unknown error'`. WebGL specifies that queries such as `getShaderInfoLog()` return null while a context is lost. Therefore the exact `unknown error` string is consistent with a context lost during compilation, not proof of malformed GLSL.
+- The app was mounting Buddy's Paper Liquid Metal canvas and Three.js renderer at the same time as the terminal's Paper canvas and the intro's custom WebGL canvas. The Buddy renderers were hidden by CSS, but their GPU contexts were still allocated.
+- Khronos documents GPU resource contention/context loss and recommends checking `isContextLost()` before reading shader/program logs. References: https://wikis.khronos.org/webgl/HandlingContextLost and https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/isContextLost
+
+### Changes
+- AppShell now passes `intro.active` to BuddyStage. During the intro, BuddyStage preloads only the JS module (no renderer/context) and does not mount the Paper Buddy skin or Three.js canvas. Those contexts are created after the intro ends.
+- This reduces the intro from four simultaneously allocated WebGL canvases (terminal Paper, Buddy Paper, Buddy Three.js, custom morph) to the two needed for the actual intro (terminal Paper + custom morph).
+- ShaderStage now attaches its context-lost listener before compiling either shader.
+- Compile diagnostics distinguish a lost WebGL context from a real compiler error. Real compiler errors include the shader stage, info log, GL/GLSL versions and numbered source context. Shader objects are cleaned up on partial failure.
+
+### Validation
+- Vercel build and browser runtime test required. If this error persists, the new message will identify either `CONTEXT_LOST_WEBGL` or the exact compiler log/source line instead of `unknown error`.

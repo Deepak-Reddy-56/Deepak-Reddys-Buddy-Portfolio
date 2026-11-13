@@ -57,6 +57,8 @@ export class ShaderStage {
     });
     if (!gl) throw new Error('WebGL unavailable');
     this.gl = gl;
+    // Listen before compilation: a lost context makes WebGL object queries return null/false.
+    canvas.addEventListener('webglcontextlost', this.handleContextLost, false);
 
     this.program = this.createProgram(VERTEX, fragmentSource);
     const buffer = gl.createBuffer();
@@ -70,7 +72,6 @@ export class ShaderStage {
     gl.useProgram(this.program);
     gl.clearColor(0, 0, 0, 0);
 
-    canvas.addEventListener('webglcontextlost', this.handleContextLost);
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas);
     this.resize();
@@ -148,32 +149,101 @@ export class ShaderStage {
 
   private createProgram(vertexSource: string, fragmentSource: string): WebGLProgram {
     const gl = this.gl;
-    const compile = (type: number, source: string) => {
+
+    const sourceContext = (source: string, log: string | null): string => {
+      const match = log?.match(/(?:ERROR:\s*)?\d+:(\d+)/i);
+      const errorLine = match ? Number(match[1]) : 1;
+      const lines = source.split('\n');
+      const start = Math.max(1, errorLine - 3);
+      const end = Math.min(lines.length, errorLine + 3);
+      return lines
+        .slice(start - 1, end)
+        .map((line, index) => String(start + index).padStart(4, ' ') + ' | ' + line)
+        .join('\n');
+    };
+
+    const compile = (type: number, label: string, source: string): WebGLShader => {
       const shader = gl.createShader(type);
-      if (!shader) throw new Error('Could not create shader');
+      if (!shader) {
+        const lost = gl.isContextLost();
+        throw new Error(lost
+          ? 'WebGL context was lost before creating the ' + label + ' shader.'
+          : 'WebGL could not allocate the ' + label + ' shader object.');
+      }
+
       gl.shaderSource(shader, source);
       gl.compileShader(shader);
+
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        const log = gl.getShaderInfoLog(shader);
+        const contextLost = gl.isContextLost();
+        const glError = gl.getError();
+        const log = contextLost ? null : gl.getShaderInfoLog(shader);
+
+        if (contextLost || glError === gl.CONTEXT_LOST_WEBGL) {
+          gl.deleteShader(shader);
+          throw new Error(
+            'WebGL context was lost while compiling the ' + label + ' shader ' +
+            '(CONTEXT_LOST_WEBGL). The browser may have reclaimed a GPU context; ' +
+            'this is not a GLSL syntax diagnostic.'
+          );
+        }
+
+        const version = String(gl.getParameter(gl.VERSION) ?? 'unavailable');
+        const shadingLanguage = String(gl.getParameter(gl.SHADING_LANGUAGE_VERSION) ?? 'unavailable');
+        const detail = log?.trim() || 'The driver returned an empty compiler log.';
+        const context = sourceContext(source, log);
         gl.deleteShader(shader);
-        throw new Error(`Shader compile failed: ${log ?? 'unknown error'}`);
+        throw new Error(
+          label + ' shader compilation failed.\n' +
+          detail + '\n' +
+          'WebGL: ' + version + ' | GLSL: ' + shadingLanguage + ' | GL error: 0x' + glError.toString(16) + '\n' +
+          'Source near reported line:\n' + context
+        );
       }
       return shader;
     };
-    const vertex = compile(gl.VERTEX_SHADER, vertexSource);
-    const fragment = compile(gl.FRAGMENT_SHADER, fragmentSource);
+
+    const vertex = compile(gl.VERTEX_SHADER, 'vertex', vertexSource);
+    let fragment: WebGLShader;
+    try {
+      fragment = compile(gl.FRAGMENT_SHADER, 'fragment', fragmentSource);
+    } catch (error) {
+      gl.deleteShader(vertex);
+      throw error;
+    }
+
     const program = gl.createProgram();
-    if (!program) throw new Error('Could not create program');
+    if (!program) {
+      gl.deleteShader(vertex);
+      gl.deleteShader(fragment);
+      throw new Error(gl.isContextLost()
+        ? 'WebGL context was lost before linking the Liquid Chrome program.'
+        : 'Could not allocate the Liquid Chrome shader program.');
+    }
+
     gl.attachShader(program, vertex);
     gl.attachShader(program, fragment);
     gl.linkProgram(program);
     gl.deleteShader(vertex);
     gl.deleteShader(fragment);
+
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      throw new Error(`Program link failed: ${gl.getProgramInfoLog(program) ?? 'unknown error'}`);
+      const contextLost = gl.isContextLost();
+      const glError = gl.getError();
+      const log = contextLost ? null : gl.getProgramInfoLog(program);
+      gl.deleteProgram(program);
+      if (contextLost || glError === gl.CONTEXT_LOST_WEBGL) {
+        throw new Error('WebGL context was lost while linking the Liquid Chrome program (CONTEXT_LOST_WEBGL).');
+      }
+      throw new Error(
+        'Liquid Chrome program link failed: ' + (log?.trim() || 'The driver returned an empty linker log.') +
+        ' (GL error 0x' + glError.toString(16) + ').'
+      );
     }
+
     return program;
   }
+}
 }
 
 /** Cheap capability probe; does not keep a context alive. */

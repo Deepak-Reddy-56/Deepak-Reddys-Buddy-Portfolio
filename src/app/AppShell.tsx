@@ -97,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SiteFooter onReplayIntro={replay} />
       </div>
 
-      <BuddyStage menuOpen={menu.isOpen} />
+      <BuddyStage menuOpen={menu.isOpen} introActive={intro.active} />
 
       {intro.active ? (
         <IntroSequence
