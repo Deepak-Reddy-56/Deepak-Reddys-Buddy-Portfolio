@@ -25,7 +25,7 @@ export function AboutSection() {
       <div className={section.wide}>
         <BuddySeat seat="about" size="inline" line={dialogue.about} className={section.opener} />
         <div className={section.label}>
-          <SectionLabel number={number} label={label} id="about-label" />
+          <SectionLabel number={number} label={label} id="about-label" speakKey="about" />
         </div>
 
         <div className={styles.grid}>

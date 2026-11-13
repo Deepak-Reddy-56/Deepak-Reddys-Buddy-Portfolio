@@ -15,3 +15,36 @@
   opacity: 0;
   transition: none;
 }
+
+
+.liveCaption {
+  position: fixed;
+  z-index: calc(var(--z-buddy) + 1);
+  left: 50%;
+  top: 50%;
+  max-width: min(240px, calc(100vw - 32px));
+  padding: 8px 12px;
+  border: 1px solid rgb(25 26 24 / 9%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 94%);
+  color: var(--color-ink);
+  box-shadow: 0 8px 26px rgb(20 22 18 / 8%);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 7px);
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out), visibility 180ms;
+}
+
+.liveCaption[data-visible='true'] {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+:global(html[data-buddy-hover='true']) {
+  cursor: pointer;
+}

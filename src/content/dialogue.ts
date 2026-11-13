@@ -18,7 +18,7 @@ export const dialogue = {
 export const spokenIntro = 'Hey, I’m Buddy!';
 
 /** Buddy's expression when he settles at each seat. */
-export const seatExpressions: Record<string, 'greeting' | 'curious' | 'happy' | 'listening' | 'thinking'> = {
+export const seatExpressions: Record<string, 'greeting' | 'curious' | 'happy' | 'listening' | 'thinking' | 'surprised' | 'wink' | 'laughing' | 'playful'> = {
   hero: 'greeting',
   about: 'curious',
   work: 'happy',

@@ -1,4 +1,5 @@
 import { seatExpressions } from '../../content/dialogue';
+import { buddyScripts, tapReactions } from '../../content/buddyScripts';
 import { FrameLoop } from '../../lib/frameLoop';
 import { buddyVoice } from '../../lib/voice/voice';
 import type { ExpressionName } from './expressions';
@@ -66,6 +67,11 @@ export class BuddyDirector {
   private menuFlight: MenuFlight | null = null;
   private menuOpen = false;
   private wasMenuOpen = false;
+  private reaction: { expression: ExpressionName; until: number } | null = null;
+  private tapCount = 0;
+  private buddyHovered = false;
+  private gesturePrimed = false;
+  private captionTimer = 0;
   private pos: Point = { x: 0, y: 0, size: 0 };
   private vel = { x: 0, y: 0 };
   private rawVel = { x: 0, y: 0, s: 0 };
@@ -101,6 +107,8 @@ export class BuddyDirector {
     window.addEventListener('scroll', this.onScroll, { passive: true });
     window.addEventListener('resize', this.onResize);
     window.addEventListener('pointermove', this.onPointer, { passive: true });
+    window.addEventListener('pointerdown', this.onPointerDown, true);
+    document.addEventListener('click', this.onBuddyClick, true);
     this.resizeObserver = new ResizeObserver(() => this.onResize());
     this.resizeObserver.observe(document.body);
     this.mutationObserver = new MutationObserver(() => {
@@ -124,6 +132,10 @@ export class BuddyDirector {
     window.removeEventListener('scroll', this.onScroll);
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('pointermove', this.onPointer);
+    window.removeEventListener('pointerdown', this.onPointerDown, true);
+    document.removeEventListener('click', this.onBuddyClick, true);
+    window.clearTimeout(this.captionTimer);
+    delete document.documentElement.dataset.buddyHover;
     this.resizeObserver.disconnect();
     this.mutationObserver.disconnect();
     this.seatEls.forEach((el) => el.removeAttribute('data-buddy-active'));
@@ -165,7 +177,74 @@ export class BuddyDirector {
   private onPointer = (event: PointerEvent) => {
     if (!this.hoverCapable || event.pointerType !== 'mouse') return;
     this.pointer = { x: event.clientX, y: event.clientY, at: this.clock };
+    const hovering = this.hitBuddy(event.clientX, event.clientY);
+    if (hovering !== this.buddyHovered) {
+      this.buddyHovered = hovering;
+      if (hovering) document.documentElement.dataset.buddyHover = 'true';
+      else delete document.documentElement.dataset.buddyHover;
+    }
     this.wake();
+  };
+
+  private onPointerDown = (event: PointerEvent) => {
+    if (!this.gesturePrimed) {
+      buddyVoice.prime();
+      this.gesturePrimed = true;
+    }
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest('a,button,input,textarea,select,[role="button"],[data-buddy-speak]')) return;
+    if (!this.hitBuddy(event.clientX, event.clientY)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.interact();
+  };
+
+  private onBuddyClick = (event: MouseEvent) => {
+    const target = event.target instanceof Element
+      ? event.target.closest<HTMLElement>('[data-buddy-speak]')
+      : null;
+    const key = target?.dataset.buddySpeak;
+    const script = key ? buddyScripts[key] : undefined;
+    if (!key || !script) return;
+    buddyVoice.prime();
+    this.reactTo(script.expression, script.speech, `heading:${key}`);
+  };
+
+  private hitBuddy(x: number, y: number): boolean {
+    if (this.pos.size < 28) return false;
+    const rx = this.pos.size * 0.49;
+    const ry = this.pos.size * 0.43;
+    const dx = (x - this.pos.x) / rx;
+    const dy = (y - this.pos.y) / ry;
+    return dx * dx + dy * dy <= 1;
+  }
+
+  interact(): void {
+    const reaction = tapReactions[this.tapCount % tapReactions.length];
+    this.tapCount += 1;
+    buddyVoice.prime();
+    this.reactTo(reaction.expression, reaction.speech, `tap:${this.tapCount}`);
+  }
+
+  private reactTo(expression: ExpressionName, speech: string, key: string): void {
+    this.reaction = { expression, until: this.clock + 2500 };
+    this.showCaption(speech);
+    buddyVoice.speakNow(key, speech);
+    this.wake();
+  }
+
+  private showCaption(text: string): void {
+    const caption = document.getElementById('buddy-live-caption');
+    if (!caption) return;
+    const halfWidth = Math.min(120, Math.max(80, this.pos.size * 0.65));
+    const left = clamp(this.pos.x, halfWidth + 12, this.viewport.w - halfWidth - 12);
+    const top = clamp(this.pos.y + this.pos.size * 0.62, 16, this.viewport.h - 54);
+    caption.textContent = text;
+    caption.style.left = `${left}px`;
+    caption.style.top = `${top}px`;
+    caption.dataset.visible = 'true';
+    window.clearTimeout(this.captionTimer);
+    this.captionTimer = window.setTimeout(() => { caption.dataset.visible = 'false'; }, Math.min(7200, Math.max(2800, text.length * 64)));
   };
 
   private introPlaying(): boolean {
@@ -398,10 +477,12 @@ export class BuddyDirector {
     if (!seated && !wantMenu) seatId = null;
     if (seatId !== this.activeSeat) this.activate(seatId, now);
 
-    // 5. Face: gaze, blink, expression.
+    // 5. Face: gaze, blink, expression. A visitor reaction briefly takes priority while seated.
+    if (this.reaction && now >= this.reaction.until) this.reaction = null;
     this.updateGaze(now, seated, flying);
     this.updateBlink();
-    this.view.model.setExpression(this.menuFlight || flying > 0.15 ? 'flying' : this.expressionFor(this.activeSeat));
+    const reactionExpression = this.reaction && seated ? this.reaction.expression : null;
+    this.view.model.setExpression(this.menuFlight || flying > 0.15 ? 'flying' : reactionExpression ?? this.expressionFor(this.activeSeat));
 
     // 6. Draw (unless the intro is still on screen).
     const talk = buddyVoice.talk(performance.now()); // speech runs on wall time
@@ -421,6 +502,7 @@ export class BuddyDirector {
       ['blink', this.blinkStart >= 0],
       ['bob', bobAmp > 0.0005],
       ['speaking', buddyVoice.isSpeaking],
+      ['reaction', !!this.reaction],
       ['expression', easing],
       ['velocity', Math.abs(this.vel.x) + Math.abs(this.vel.y) > 2],
       ['woken', now - this.lastWake < 150],
@@ -440,6 +522,8 @@ export class BuddyDirector {
     if (seatId) {
       this.seatElement(seatId)?.setAttribute('data-buddy-active', '');
       this.arrivedAt = now;
+      const script = buddyScripts[seatId];
+      if (script?.autoSpeak) buddyVoice.sayOnce(`arrival:${seatId}`, script.speech);
     }
   }
 

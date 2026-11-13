@@ -74,3 +74,14 @@ A visitor should feel that they have entered a small, thoughtful digital world�
 - Deploy preview, inspect build logs and screenshots.
 - Promote production only when checks pass.
 - Add custom domain later if desired.
+
+
+## M4 — Buddy interactivity (reviewable slices)
+- [x] M4.1 — Central narration scripts, once-per-visit section voice, clickable headings/projects, tap reactions, expression variants and non-overlapping voice controller.
+- [ ] M4.2 — Voice selection/preferences UI, expression timing polish and project interaction feedback.
+- [ ] M4.3 — Real-device voice review and speech/caption timing.
+
+## M5 — Reference-layout parity
+- Compare desktop, laptop and mobile compositions against the supplied Adam Perlis walkthroughs.
+- Match hierarchy, section rhythm, layout proportions, work/product presentation and page transitions.
+- Preserve Buddy's seat/flight system while refining the page architecture.

@@ -18,3 +18,23 @@
   font-variant-numeric: tabular-nums;
   font-size: var(--text-base);
 }
+
+
+.trigger {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 5px;
+  border-radius: 3px;
+}

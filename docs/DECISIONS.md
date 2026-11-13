@@ -59,3 +59,11 @@
 - **Edge corridor instead of hops.** At 390 the text column spans 20–370 px. Any on-screen path between two sections would have to cross a full-width text line, so no on-screen corridor exists. Buddy instead flies out along the empty seat row, runs just past the screen edge, and sweeps back in. He never pops in or out of existence.
 - **Minimum flight scale 70 %, normally 80 %.** If a visible route needs less than 70 %, the route changes (edge corridor) rather than shrinking him further.
 - **Time follows visibility.** Hidden stretches are flown quickly so the visible part of each flight gets most of the scroll distance.
+
+
+## 2026-11-13 — M4.1
+- One narration catalog; section arrival lines play once per page visit, while clicking a heading or project title replays its narration.
+- Buddy tap reactions change expression on the same 3D model; no duplicate avatars or WebGL contexts.
+- Voice remains local Web Speech for this slice. The provider is replaceable; ranked English voice selection, cancellation, a persistent voice preference API and a text-aware watchdog improve consistency without adding network or paid TTS dependencies.
+- Sound-off means no speech. Captions remain available; pointer gestures prime browser speech for return visits.
+- Reference-layout parity is a separate milestone so interaction logic and major layout changes are not mixed in one large patch.

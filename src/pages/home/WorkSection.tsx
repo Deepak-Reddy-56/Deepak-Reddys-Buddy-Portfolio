@@ -20,7 +20,7 @@ export function WorkSection() {
       <div className={section.column}>
         <BuddySeat seat="work" size="inline" line={dialogue.work} className={section.opener} />
         <div className={section.label}>
-          <SectionLabel number={number} label={label} id="work-label" />
+          <SectionLabel number={number} label={label} id="work-label" speakKey="work" />
         </div>
         <TwoTone
           className={styles.lede}
@@ -36,7 +36,7 @@ export function WorkSection() {
                   <span className={styles.index} aria-hidden="true">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <span className={styles.name}>{project.name}</span>
+                  <span className={styles.name} data-buddy-speak={`project:${project.slug}`}>{project.name}</span>
                   {project.status ? (
                     <span className={styles.status}>
                       <span className={styles.dot} aria-hidden="true" />

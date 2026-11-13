@@ -78,3 +78,25 @@
   transform: translateY(6px);
   transition: none;
 }
+
+
+.titleTrigger {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.titleTrigger:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 5px;
+  border-radius: 3px;
+}

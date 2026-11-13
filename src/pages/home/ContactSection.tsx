@@ -17,7 +17,7 @@ export function ContactSection() {
       <div className={section.column}>
         <BuddySeat seat="contact" size="inline" line={dialogue.contact} className={section.opener} />
         <div className={section.label}>
-          <SectionLabel number={number} label={label} id="contact-label" />
+          <SectionLabel number={number} label={label} id="contact-label" speakKey="contact" />
         </div>
         <TwoTone lead="Building something, or hiring someone who builds?" rest="Tell me what you’re making." />
 

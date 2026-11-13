@@ -56,5 +56,13 @@ export function BuddyStage({ menuOpen }: { menuOpen: boolean }) {
   }, [menuOpen]);
 
   if (reducedMotion) return null;
-  return <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />;
+  return (
+    <>
+      <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />
+      <div id="buddy-live-caption" className={styles.liveCaption} aria-live="polite" aria-atomic="true" />
+      <button type="button" className="visually-hidden" onClick={() => buddyRef.current?.director.interact()} aria-label="Ask Buddy for a reaction">
+        Ask Buddy for a reaction
+      </button>
+    </>
+  );
 }

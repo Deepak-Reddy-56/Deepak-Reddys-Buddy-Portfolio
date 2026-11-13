@@ -207,3 +207,14 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
   - Preview is behind Vercel Deployment Protection (as in M2); rendered output on the preview not verified from the sandbox.
 - **Known issues:** GPU frame rate, real-device scroll feel and real TTS audio unverified (sandbox: software rendering, no voices) · mobile mid-flight runs just off screen (20 px margins).
 - **Exact next task:** owner checks the preview on real devices; then plan M4 (homepage storytelling and interactive project carousel) for approval.
+
+
+## 2026-11-13 — M4.1: Buddy interaction and narration foundation
+- Created branch `m4-buddy-interactivity` from pushed M3 checkpoint `44d0289`; M1, M2, M3 and `main` remain untouched.
+- Added one narration catalog (`content/buddyScripts.ts`) for section arrivals, clickable headings, six repository-backed project summaries and five tap reactions.
+- Added delegated interactions in `BuddyDirector`: section labels and project names use `data-buddy-speak`; tapping Buddy cycles surprised, wink, laughing, playful and happy expressions. The 3D model remains one persistent character.
+- Added once-per-visit narration on About / Work / Contact arrival and click-to-replay on the hero, section headings and project names.
+- Updated the voice controller to cancel overlapping speech, rank natural English system voices, expose a saved voice preference API, and use a text-aware watchdog. No paid service, audio dependency or remote request added.
+- Added a live caption for tap reactions and a keyboard-accessible reaction control.
+- M4.1 is intentionally scoped to character interaction and narration; carousel, case studies, playground and reference-layout redesign are not part of this slice.
+- Next: verify the branch build/preview, listen on real devices, then plan M4.2 (voice selection UI and interaction polish) and M5 (reference-layout parity).

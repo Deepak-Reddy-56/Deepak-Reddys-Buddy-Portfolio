@@ -11,8 +11,11 @@ export function HeroSection() {
           {site.monogram}
         </span>
         <h1 id="hero-title" className={styles.title}>
-          <span className={styles.titleLead}>Hello, I’m Deepak.</span>
-          <span className={styles.titleRest}>{site.tagline}</span>
+          <button type="button" className={styles.titleTrigger} data-buddy-speak="home">
+            <span className={styles.titleLead}>Hello, I’m Deepak.</span>
+            <span className={styles.titleRest}>{site.tagline}</span>
+            <span className="visually-hidden"> — hear Buddy's introduction</span>
+          </button>
         </h1>
       </div>
 
