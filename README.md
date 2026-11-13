@@ -1,48 +1,55 @@
-# Deepak Reddy — Buddy Portfolio
+# Deepak Reddy — Portfolio
 
-An interactive, story-led portfolio for a software engineer and product builder. This is an incremental build inspired by the craft, pacing, and playful character-led storytelling of [Adam Perlis](https://adamperlis.com/)—not a copy of its assets or identity.
+A React/Vite recreation of the page structure and navigation patterns in the open-source reference repository [adamperlis/adamperlis.com](https://github.com/adamperlis/adamperlis.com), adapted to Deepak Reddy's projects and profile.
 
-## Direction
+## Reference-led design
 
-The goal is not a static résumé page. The experience should feel like a small digital product:
+This branch follows the linked repository's portfolio pattern:
 
-- A memorable first-contact sequence, not a generic hero banner.
-- A custom 3D companion ("Buddy") that guides the visitor through the story without behaving like a chat widget.
-- Scroll-led storytelling with carefully timed motion and purposeful transitions.
-- Project case studies that show real work, decisions, architecture, and outcomes.
-- An interactive playground where visitors can manipulate parts of the experience.
-- Responsive, accessible, performant, and comfortable on reduced-motion devices.
+- Minimal fixed header with Work and About navigation.
+- Centered landing page with oversized condensed name typography and a rotating professional descriptor.
+- Individual, full-screen project title pages with distinct colour themes and a project-specific visual.
+- Fixed numbered project rail, previous/next controls and scroll-to-top interaction.
+- Long-form project pages with overview, workflow, implementation notes and technology lists.
+- A separate About page with profile, education, skills and GitHub contact.
 
-## Build principles
+The implementation is rewritten in React and TypeScript with Vite. It does not reuse the reference owner's identity, profile photo, project images, or project copy. Project facts are based on the corresponding project repositories. No unverified customer metrics, deployment claims, or outcomes are presented.
 
-1. Work in small, reviewable milestones. Do not ship the whole concept in one giant pass.
-2. Keep a build log in `docs/BUILD_LOG.md` with decisions, prompts, changes, and validation.
-3. Establish design tokens and motion rules before adding complex page sections.
-4. Every showcased project and claim must be grounded in the owner's real work.
-5. Prefer original assets, original writing, and original implementation. References inform the craft, not a pixel-for-pixel clone.
-6. Test desktop and mobile; respect `prefers-reduced-motion`.
+## Projects
 
-## Planned milestones
+1. Secure BMS Provenance
+2. SentinelLog
+3. LotLens
+4. Phishing Shield
+5. CampusCopilot
+6. Clara & Co.
 
-- [x] M0 — Repository and project brief
-- [ ] M1 — Reference study, visual system, and responsive shell
-- [ ] M2 — Entry sequence: terminal interaction and first reveal
-- [ ] M3 — Buddy character prototype and motion language
-- [ ] M4 — Story-led home page and project showcase
-- [ ] M5 — Individual work / case-study pages
-- [ ] M6 — Interactive Buddy playground
-- [ ] M7 — About, skills, and contact experiences
-- [ ] M8 — Performance, accessibility, SEO, and device QA
-- [ ] M9 — Vercel production deployment
+Project information is data-driven in \`src/content/projects.ts\`. Add or edit a project there; the navigation rail and previous/next controls are generated from the same list.
 
-## Intended stack
+## Local development
 
-The stack is deliberately kept flexible until M1. The likely direction is a static-first TypeScript frontend with WebGL/Three.js for the character and GSAP for choreographed motion. Avoid adding dependencies until a milestone needs them.
+Requires Node.js 20 or newer.
 
-## Development log
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
 
-See [docs/BUILD_LOG.md](docs/BUILD_LOG.md) for the decisions and changes made milestone by milestone.
+Production build:
 
-## Local setup
+\`\`\`bash
+npm run build
+npm run preview
+\`\`\`
 
-Project scaffolding will be added in M1. Until then, this repository contains the project brief and build plan.
+## Routing
+
+- \`/\` — home
+- \`/about\` — about
+- \`/project/:slug\` — project detail page
+
+\`vercel.json\` rewrites client-side routes to the Vite entry point so direct links and refreshes work on Vercel.
+
+## Attribution
+
+The page composition and interaction model are adapted from the public repository [adamperlis/adamperlis.com](https://github.com/adamperlis/adamperlis.com). Its repository includes an MIT license; the original copyright and license notice are retained in \`THIRD_PARTY_NOTICES.md\`. This implementation has been rewritten and uses original profile copy and project-specific visual artwork.

@@ -1,408 +1,417 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { projects, profile, type PortfolioProject } from './content/projects';
 
-const projects = [
-  {
-    number: '01',
-    name: 'Secure BMS Provenance',
-    category: 'Blockchain · Supply chain',
-    description:
-      'A permissioned ledger concept for tracking a component through its lifecycle, from manufacturer to assembly.',
-    note: 'Hyperledger Fabric / Node.js',
-    href: 'https://github.com/Deepak-Reddy-56/secure-bms-provenance',
-    visual: 'visual-ledger',
-  },
-  {
-    number: '02',
-    name: 'SentinelLog',
-    category: 'Security · Systems',
-    description:
-      'A rule-based security log monitoring system that looks for suspicious activity and turns it into actionable alerts.',
-    note: 'Python / FastAPI / SQLite',
-    href: 'https://github.com/Deepak-Reddy-56/SentinelLog',
-    visual: 'visual-sentinel',
-  },
-  {
-    number: '03',
-    name: 'Phishing Shield',
-    category: 'Security · Web',
-    description:
-      'A URL safety project exploring practical heuristics, domain lookalikes, and safer browsing decisions.',
-    note: 'JavaScript / Express',
-    href: 'https://github.com/Deepak-Reddy-56/Phishing-Shield',
-    visual: 'visual-shield',
-  },
-];
+type Route =
+  | { page: 'home' }
+  | { page: 'about' }
+  | { page: 'project'; slug: string };
 
-function Icon({ name }: { name: 'home' | 'menu' | 'close' | 'arrow' | 'github' }) {
-  const common = {
-    width: 18,
-    height: 18,
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.7,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    'aria-hidden': true as const,
+function routeFromPath(pathname: string): Route {
+  if (pathname === '/about') return { page: 'about' };
+  const match = pathname.match(/^\/project\/([^/]+)\/?$/);
+  if (match) return { page: 'project', slug: match[1] };
+  return { page: 'home' };
+}
+
+function pathForProject(project: PortfolioProject): string {
+  return '/project/' + project.slug;
+}
+
+function useRoute() {
+  const [route, setRoute] = useState<Route>(() => routeFromPath(window.location.pathname));
+
+  useEffect(() => {
+    const onPopState = () => setRoute(routeFromPath(window.location.pathname));
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigate = (path: string) => {
+    if (window.location.pathname !== path) window.history.pushState({}, '', path);
+    setRoute(routeFromPath(path));
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
-  if (name === 'home') {
-    return (
-      <svg {...common}>
-        <path d="m3.5 10 8.5-7 8.5 7" />
-        <path d="M5.5 9v11h13V9M9.5 20v-6h5v6" />
-      </svg>
-    );
-  }
+  return { route, navigate };
+}
 
-  if (name === 'menu') {
-    return (
-      <svg {...common}>
-        <path d="M4 8h16M4 16h16" />
-      </svg>
-    );
-  }
-
-  if (name === 'close') {
-    return (
-      <svg {...common}>
-        <path d="m6 6 12 12M18 6 6 18" />
-      </svg>
-    );
-  }
-
-  if (name === 'github') {
-    return (
-      <svg {...common}>
-        <path d="M9 19c-4.2 1.3-4.2-2.1-5.9-2.5M15 21v-3.2a2.8 2.8 0 0 0-.8-2.2c2.7-.3 5.5-1.3 5.5-6a4.7 4.7 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1-.3-3.3 1.2a11.5 11.5 0 0 0-6 0C6.7 2.9 5.7 3.2 5.7 3.2a4.3 4.3 0 0 0-.1 3.2 4.7 4.7 0 0 0-1.3 3.3c0 4.6 2.8 5.6 5.5 5.9a2.8 2.8 0 0 0-.8 2.2V21" />
-      </svg>
-    );
-  }
-
+function Arrow({ direction = 'right' }: { direction?: 'left' | 'right' | 'down' | 'up' }) {
+  const paths = {
+    right: 'M4 12h15m-6-6 6 6-6 6',
+    left: 'M20 12H5m6-6-6 6 6 6',
+    down: 'M12 4v15m-6-6 6 6 6-6',
+    up: 'M12 20V5m-6 6 6-6 6 6',
+  };
   return (
-    <svg {...common}>
-      <path d="M5 12h13M13 6l6 6-6 6" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d={paths[direction]} />
     </svg>
   );
 }
 
-function BuddyStandIn() {
+function GithubMark() {
   return (
-    <div className="buddy-wrap" aria-label="Buddy, a glossy abstract companion character">
-      <div className="buddy-shadow" />
-      <div className="buddy-orb">
-        <div className="buddy-ribbon" />
-        <div className="buddy-face">
-          <span className="buddy-eye buddy-eye-left"><i /></span>
-          <span className="buddy-eye buddy-eye-right"><i /></span>
-          <span className="buddy-mouth" />
-        </div>
-        <span className="buddy-glint buddy-glint-one" />
-        <span className="buddy-glint buddy-glint-two" />
-      </div>
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <path d="M12 .8a11.2 11.2 0 0 0-3.54 21.83c.56.1.76-.24.76-.54v-2.1c-3.1.68-3.76-1.31-3.76-1.31-.5-1.28-1.23-1.62-1.23-1.62-1.01-.7.08-.69.08-.69 1.12.08 1.71 1.15 1.71 1.15 1 1.72 2.61 1.23 3.25.94.1-.73.39-1.23.71-1.52-2.48-.28-5.09-1.24-5.09-5.52 0-1.22.44-2.21 1.15-2.99-.12-.28-.5-1.42.11-2.96 0 0 .94-.3 3.08 1.14a10.7 10.7 0 0 1 5.6 0c2.14-1.44 3.08-1.14 3.08-1.14.61 1.54.23 2.68.11 2.96.72.78 1.15 1.77 1.15 2.99 0 4.29-2.61 5.23-5.1 5.51.4.35.76 1.03.76 2.08v3.08c0 .3.2.65.77.54A11.2 11.2 0 0 0 12 .8Z" />
+    </svg>
+  );
+}
+
+function SiteHeader({ navigate, active }: { navigate: (path: string) => void; active: string }) {
+  return (
+    <header className="site-header">
+      <button className="brand" onClick={() => navigate('/')} aria-label="Deepak Reddy home">
+        <span className="brand-mark">DR</span>
+        <span className="brand-name">DEEPAK REDDY</span>
+      </button>
+      <nav className="main-nav" aria-label="Main navigation">
+        <button className={active === 'work' ? 'active' : ''} onClick={() => navigate(pathForProject(projects[0]))}>WORK</button>
+        <button className={active === 'about' ? 'active' : ''} onClick={() => navigate('/about')}>ABOUT</button>
+      </nav>
+      <a className="header-github" href={profile.github} target="_blank" rel="noreferrer" aria-label="GitHub profile">
+        <GithubMark />
+      </a>
+    </header>
+  );
+}
+
+function SocialLinks() {
+  return (
+    <div className="social-links">
+      <a href={profile.github} target="_blank" rel="noreferrer" aria-label="GitHub">
+        <GithubMark />
+      </a>
     </div>
   );
 }
 
-function App() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('home');
-  const [scrollProgress, setScrollProgress] = useState(0);
+function HomePage({ navigate }: { navigate: (path: string) => void }) {
+  const roles = useMemo(() => ['Software Engineer', 'Backend Builder', 'Full-stack Developer', 'Computer Science Student'], []);
+  const [roleIndex, setRoleIndex] = useState(0);
 
   useEffect(() => {
-    const sectionIds = ['home', 'about', 'work', 'contact'];
-
-    const updateScrollState = () => {
-      const maxScroll =
-        document.documentElement.scrollHeight - window.innerHeight;
-      setScrollProgress(maxScroll > 0 ? window.scrollY / maxScroll : 0);
-
-      let current = 'home';
-      for (const id of sectionIds) {
-        const section = document.getElementById(id);
-        if (section && section.getBoundingClientRect().top <= window.innerHeight * 0.42) {
-          current = id;
-        }
-      }
-      setActiveSection(current);
-    };
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false);
-    };
-
-    window.addEventListener('scroll', updateScrollState, { passive: true });
-    window.addEventListener('resize', updateScrollState);
-    window.addEventListener('keydown', closeOnEscape);
-    updateScrollState();
-
-    return () => {
-      window.removeEventListener('scroll', updateScrollState);
-      window.removeEventListener('resize', updateScrollState);
-      window.removeEventListener('keydown', closeOnEscape);
-    };
-  }, []);
-
-  const navigateTo = (id: string) => {
-    setMenuOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+    const timer = window.setInterval(() => setRoleIndex((value) => (value + 1) % roles.length), 2300);
+    return () => window.clearInterval(timer);
+  }, [roles]);
 
   return (
-    <>
-      <div className="page-grain" aria-hidden="true" />
-      <div className="scroll-progress" aria-hidden="true">
-        <span style={{ transform: `scaleY(${scrollProgress})` }} />
-      </div>
-
-      <header className="site-header">
-        <a className="identity" href="#home" aria-label="Deepak Reddy, home">
-          <span className="identity-avatar">DR</span>
-          <span className="identity-copy">
-            <strong>Deepak Reddy</strong>
-            <small>Software engineer · Builder</small>
-          </span>
-        </a>
-
-        <div className="header-controls" aria-label="Site controls">
-          <button
-            className="round-control"
-            onClick={() => navigateTo('home')}
-            aria-label="Go to home"
-            title="Home"
-          >
-            <Icon name="home" />
-          </button>
-          <button
-            className="round-control menu-control"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-expanded={menuOpen}
-            aria-controls="site-menu"
-            aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            title={menuOpen ? 'Close menu' : 'Menu'}
-          >
-            <Icon name={menuOpen ? 'close' : 'menu'} />
-          </button>
+    <main className="home-page">
+      <div className="watermark" aria-hidden="true">DR</div>
+      <div className="home-center">
+        <div className="hero-kicker"><span className="kicker-line" /> SOFTWARE · SYSTEMS · PRODUCT <span className="kicker-line" /></div>
+        <h1 className="home-title">DEEPAK<br /><span>REDDY</span></h1>
+        <div className="role-window" aria-live="polite">
+          <span key={roles[roleIndex]} className="role-text">{roles[roleIndex]}</span>
         </div>
-      </header>
-
-      {menuOpen && (
-        <nav className="menu-panel" id="site-menu" aria-label="Main navigation">
-          <span className="menu-eyebrow">TAKE A LOOK AROUND</span>
-          {[
-            ['home', 'Introduction', '01'],
-            ['about', 'The builder', '02'],
-            ['work', 'Selected work', '03'],
-            ['contact', 'Say hello', '04'],
-          ].map(([id, label, number]) => (
-            <button
-              className="menu-link"
-              key={id}
-              onClick={() => navigateTo(id)}
-            >
-              <span className="menu-number">{number}</span>
-              <span>{label}</span>
-              <Icon name="arrow" />
-            </button>
-          ))}
-          <p className="menu-footnote">A little world made with care in Bengaluru.</p>
-        </nav>
-      )}
-
-      <aside className="section-rail" aria-label="Section navigation">
-        {[
-          ['home', 'Intro'],
-          ['about', 'About'],
-          ['work', 'Work'],
-          ['contact', 'Contact'],
-        ].map(([id, label]) => (
-          <a
-            key={id}
-            href={`#${id}`}
-            className={activeSection === id ? 'rail-link is-active' : 'rail-link'}
-            aria-label={label}
-            aria-current={activeSection === id ? 'location' : undefined}
-          >
-            <span />
-          </a>
-        ))}
-      </aside>
-
-      <main>
-        <section className="hero-section" id="home">
-          <div className="hero-meta">
-            <span>INDEPENDENTLY BUILT</span>
-            <span>BASED IN BENGALURU, INDIA</span>
-          </div>
-
-          <div className="hero-content">
-            <p className="eyebrow hero-eyebrow">
-              HELLO, I'M DEEPAK <span className="eyebrow-dot" />
-            </p>
-            <h1>
-              I build things
-              <br />
-              <span>that make sense.</span>
-            </h1>
-            <p className="hero-description">
-              Software, systems, and thoughtful digital products.
-              <br className="desktop-break" />
-              Always curious about how things work under the hood.
-            </p>
-
-            <div className="buddy-stage">
-              <BuddyStandIn />
-              <div className="buddy-caption">
-                <span className="caption-dot" />
-                <p>
-                  Oh, hi. I'm <strong>Buddy.</strong>
-                  <br />
-                  I'll show you around.
-                </p>
-              </div>
-            </div>
-
-            <button className="text-link hero-cta" onClick={() => navigateTo('about')}>
-              Come on in <Icon name="arrow" />
-            </button>
-          </div>
-
-          <div className="hero-bottom">
-            <span>SCROLL TO EXPLORE</span>
-            <span className="scroll-line" />
-            <span>01 — 04</span>
-          </div>
-        </section>
-
-        <section className="about-section section-pad" id="about">
-          <div className="section-heading">
-            <span className="section-number">01</span>
-            <span className="eyebrow">THE PERSON BEHIND THE BUILDS</span>
-          </div>
-          <div className="about-grid">
-            <h2>
-              Curious by default.
-              <br />
-              <span>Builder by choice.</span>
-            </h2>
-            <div className="about-copy">
-              <p className="large-copy">
-                I'm a computer science student who enjoys turning messy
-                problems into systems that are clear, useful, and dependable.
-              </p>
-              <p>
-                Most of my time goes into backend engineering, full-stack
-                products, security, and understanding what happens between a
-                user's action and the system's response.
-              </p>
-              <p>
-                I care about the details: a clean API, a thoughtful interface,
-                a deployment that behaves, and the little interactions that
-                make software feel considered.
-              </p>
-              <button className="text-link" onClick={() => navigateTo('work')}>
-                See what I've been building <Icon name="arrow" />
-              </button>
-            </div>
-          </div>
-          <div className="about-foot">
-            <span>COMPUTER SCIENCE · CHRIST UNIVERSITY</span>
-            <span>LEARNING, BUILDING, REPEATING ↗</span>
-          </div>
-        </section>
-
-        <section className="work-section section-pad" id="work">
-          <div className="section-heading">
-            <span className="section-number">02</span>
-            <span className="eyebrow">A FEW THINGS I'VE PUT INTO THE WORLD</span>
-          </div>
-          <div className="work-intro">
-            <h2>
-              Less talking.
-              <br />
-              <span>More making.</span>
-            </h2>
-            <p>
-              A selection of systems and products I've been working on.
-              Each one taught me something different.
-            </p>
-          </div>
-
-          <div className="project-list">
-            {projects.map((project) => (
-              <article className="project-row" key={project.number}>
-                <div className={`project-visual ${project.visual}`}>
-                  <span className="project-visual-index">{project.number}</span>
-                  <div className="visual-mark" aria-hidden="true">
-                    {project.visual === 'visual-ledger' && (
-                      <div className="ledger-mark">
-                        <span /><span /><span />
-                      </div>
-                    )}
-                    {project.visual === 'visual-sentinel' && (
-                      <div className="sentinel-mark"><i /><i /><i /></div>
-                    )}
-                    {project.visual === 'visual-shield' && (
-                      <div className="shield-mark"><span>✓</span></div>
-                    )}
-                  </div>
-                  <span className="visual-caption">PROJECT / {project.number}</span>
-                </div>
-                <div className="project-details">
-                  <div className="project-topline">
-                    <span>{project.category}</span>
-                    <span>{project.number} / 03</span>
-                  </div>
-                  <h3>{project.name}</h3>
-                  <p>{project.description}</p>
-                  <div className="project-bottomline">
-                    <span>{project.note}</span>
-                    <a href={project.href} target="_blank" rel="noreferrer">
-                      View repository <Icon name="arrow" />
-                    </a>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-          <p className="work-note">
-            This is only the beginning. Individual project stories and
-            interactive walkthroughs are coming in the next build stages.
-          </p>
-        </section>
-
-        <section className="contact-section section-pad" id="contact">
-          <div className="section-heading">
-            <span className="section-number">03</span>
-            <span className="eyebrow">THE NEXT GOOD THING STARTS SOMEWHERE</span>
-          </div>
-          <div className="contact-content">
-            <p className="eyebrow">HAVE SOMETHING INTERESTING IN MIND?</p>
-            <h2>
-              Let's make
-              <br />
-              <span>it happen.</span>
-            </h2>
-            <a className="contact-email" href="mailto:deepakreddy@example.com">
-              Get in touch <Icon name="arrow" />
-            </a>
-          </div>
-          <footer className="site-footer">
-            <span>© {new Date().getFullYear()} DEEPAK REDDY</span>
-            <div className="footer-links">
-              <a href="https://github.com/Deepak-Reddy-56" target="_blank" rel="noreferrer">
-                GitHub <Icon name="arrow" />
-              </a>
-              <a href="https://www.linkedin.com/" target="_blank" rel="noreferrer">
-                LinkedIn <Icon name="arrow" />
-              </a>
-            </div>
-            <span>MADE WITH CURIOSITY, IN BENGALURU.</span>
-          </footer>
-        </section>
-      </main>
-    </>
+        <p className="home-intro">
+          I build practical software, from backend systems<br className="desktop-only" />
+          to thoughtful full-stack experiences.
+        </p>
+        <SocialLinks />
+        <button className="home-work-link" onClick={() => navigate(pathForProject(projects[0]))}>
+          EXPLORE MY WORK <Arrow />
+        </button>
+      </div>
+      <div className="home-bottom">
+        <span>BASED IN BENGALURU, INDIA</span>
+        <span className="home-scroll-cue"><i /> SCROLL OR SELECT WORK</span>
+        <span>PORTFOLIO · 2026</span>
+      </div>
+    </main>
   );
 }
 
-export default App;
+function ProjectArtwork({ project }: { project: PortfolioProject }) {
+  return (
+    <div className={'project-artwork art-' + project.visual} aria-label={project.name + ' visual'} role="img">
+      <div className="art-grid" />
+      <span className="art-corner art-corner-top">DR / {project.number}</span>
+      <span className="art-corner art-corner-bottom">{project.eyebrow}</span>
+      {project.visual === 'ledger' && (
+        <div className="art-ledger">
+          <div className="ledger-node node-a">MFG</div>
+          <div className="ledger-line line-a" />
+          <div className="ledger-node node-b">CERT</div>
+          <div className="ledger-line line-b" />
+          <div className="ledger-node node-c">SHIP</div>
+          <div className="ledger-line line-c" />
+          <div className="ledger-node node-d">ASSY</div>
+          <div className="ledger-orbit" />
+        </div>
+      )}
+      {project.visual === 'sentinel' && (
+        <div className="art-sentinel">
+          <div className="sentinel-ring ring-one" />
+          <div className="sentinel-ring ring-two" />
+          <div className="sentinel-ring ring-three" />
+          <div className="sentinel-core"><span>LIVE</span><strong>LOG</strong></div>
+          <i className="signal signal-one" /><i className="signal signal-two" /><i className="signal signal-three" />
+        </div>
+      )}
+      {project.visual === 'lotlens' && (
+        <div className="art-lotlens">
+          <div className="lens-circle"><div /><div /><div /></div>
+          <span className="lens-label label-one">CASE 014</span>
+          <span className="lens-label label-two">ROOT CAUSE</span>
+          <span className="lens-label label-three">VERIFIED</span>
+        </div>
+      )}
+      {project.visual === 'shield' && (
+        <div className="art-shield">
+          <div className="shield-outline"><span>!</span></div>
+          <i className="shield-spark spark-one" /><i className="shield-spark spark-two" />
+          <span className="shield-label">MESSAGE REVIEW</span>
+        </div>
+      )}
+      {project.visual === 'campus' && (
+        <div className="art-campus">
+          <div className="campus-map"><i /><i /><i /><i /><i /><i /><span className="map-route" /></div>
+          <span className="campus-tag tag-one">EVENTS</span>
+          <span className="campus-tag tag-two">DATA</span>
+          <span className="campus-tag tag-three">CAMPUS</span>
+        </div>
+      )}
+      {project.visual === 'clara' && (
+        <div className="art-clara">
+          <div className="clara-window">
+            <div className="clara-window-top"><i /><i /><i /><span>CLARA & CO.</span></div>
+            <div className="clara-display"><div className="clara-product product-one" /><div className="clara-product product-two" /><div className="clara-product product-three" /></div>
+            <div className="clara-lines"><i /><i /></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectIndex({ current, navigate }: { current: number; navigate: (path: string) => void }) {
+  return (
+    <aside className="project-index" aria-label="Project navigation">
+      <span className="index-label">SELECTED WORK</span>
+      {projects.map((project, index) => (
+        <button
+          key={project.slug}
+          className={current === index ? 'index-item is-current' : 'index-item'}
+          onClick={() => navigate(pathForProject(project))}
+          aria-label={'Open project ' + project.number + ': ' + project.name}
+          aria-current={current === index ? 'page' : undefined}
+          title={project.name}
+        >
+          {project.number}
+        </button>
+      ))}
+    </aside>
+  );
+}
+
+function ProjectControls({ index, navigate }: { index: number; navigate: (path: string) => void }) {
+  const previous = projects[(index - 1 + projects.length) % projects.length];
+  const next = projects[(index + 1) % projects.length];
+  return (
+    <div className="project-controls">
+      <button onClick={() => navigate(pathForProject(previous))} aria-label={'Previous project: ' + previous.name}>
+        <Arrow direction="left" /><span>PREVIOUS</span>
+      </button>
+      <button className="control-scroll" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to top">
+        <Arrow direction="up" />
+      </button>
+      <button onClick={() => navigate(pathForProject(next))} aria-label={'Next project: ' + next.name}>
+        <span>NEXT</span><Arrow />
+      </button>
+    </div>
+  );
+}
+
+function ProjectPage({ project, navigate }: { project: PortfolioProject; navigate: (path: string) => void }) {
+  const index = projects.findIndex((item) => item.slug === project.slug);
+
+  return (
+    <main className={'project-page theme-' + project.theme}>
+      <div className="project-hero">
+        <div className="project-watermark" aria-hidden="true">{project.number}</div>
+        <div className="project-hero-copy">
+          <p className="project-eyebrow">{project.eyebrow}</p>
+          <h1>{project.title}</h1>
+          <p className="project-subtitle">~ &nbsp; {project.subtitle} &nbsp; ~</p>
+          <div className="project-meta">
+            <span>{project.client}</span>
+            {project.status && <span className="project-status">{project.status}</span>}
+          </div>
+          <a className="project-launch" href={project.repo} target="_blank" rel="noreferrer">
+            VIEW REPOSITORY <Arrow />
+          </a>
+        </div>
+        <div className="project-art-holder"><ProjectArtwork project={project} /></div>
+        <button className="project-scroll" onClick={() => document.getElementById('project-story')?.scrollIntoView({ behavior: 'smooth' })}>
+          <span>SCROLL TO EXPLORE</span><Arrow direction="down" />
+        </button>
+      </div>
+
+      <section className="project-story" id="project-story">
+        <div className="story-intro">
+          <div className="story-number">PROJECT {project.number}</div>
+          <p>{project.description}</p>
+        </div>
+
+        <div className="story-divider" />
+        <div className="story-highlight-grid">
+          <div className="story-section-heading">
+            <span>01 / AT A GLANCE</span>
+            <h2>What it<br /><em>does.</em></h2>
+          </div>
+          <div className="story-highlights">
+            {project.highlights.map((highlight, itemIndex) => (
+              <div className="highlight-row" key={highlight}>
+                <span>{String(itemIndex + 1).padStart(2, '0')}</span>
+                <p>{highlight}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {project.sections.map((section, sectionIndex) => (
+          <section className="story-chapter" key={section.heading}>
+            <div className="chapter-index">0{sectionIndex + 2} / {section.heading.toUpperCase()}</div>
+            <div className="chapter-content">
+              <h2>{section.heading}</h2>
+              <p>{section.body}</p>
+              {section.bullets && (
+                <ul>
+                  {section.bullets.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              )}
+            </div>
+          </section>
+        ))}
+
+        <div className="stack-panel">
+          <div>
+            <span className="chapter-index">BUILT WITH</span>
+            <h2>The tools<br /><em>behind it.</em></h2>
+          </div>
+          <div className="stack-list">
+            {project.stack.map((item) => <span key={item}>{item}</span>)}
+          </div>
+        </div>
+
+        <div className="story-end">
+          <span>WANT TO LOOK CLOSER?</span>
+          <h2>Explore the<br /><em>repository.</em></h2>
+          <a className="project-launch project-launch-dark" href={project.repo} target="_blank" rel="noreferrer">
+            OPEN SOURCE CODE <Arrow />
+          </a>
+        </div>
+      </section>
+      <ProjectControls index={index} navigate={navigate} />
+      <ProjectIndex current={index} navigate={navigate} />
+    </main>
+  );
+}
+
+function AboutPage() {
+  return (
+    <main className="about-page">
+      <div className="about-hero">
+        <div className="about-monogram">DR</div>
+        <p className="about-kicker">A LITTLE ABOUT THE PERSON BUILDING THIS</p>
+        <h1>THE BUILDER<br /><span>BEHIND THE BUILDS.</span></h1>
+      </div>
+      <div className="about-content">
+        <div className="about-contact">
+          <span>ABOUT / 01</span>
+          <a href={profile.github} target="_blank" rel="noreferrer">GITHUB PROFILE <Arrow /></a>
+        </div>
+        <div className="about-main-copy">
+          <h2>{profile.summary}</h2>
+          <p>
+            My interests sit around backend development, full-stack engineering, security and systems.
+            I enjoy projects where the pieces have to work together: a clear data model, predictable
+            business rules, a reliable API and an interface that makes the workflow understandable.
+          </p>
+        </div>
+
+        <div className="about-info-grid">
+          <div className="about-info-card">
+            <span>EDUCATION</span>
+            <h3>{profile.education}</h3>
+            <p>Expected graduation · {profile.graduation}</p>
+          </div>
+          <div className="about-info-card">
+            <span>LOCATION</span>
+            <h3>{profile.location}</h3>
+            <p>Building, learning and iterating.</p>
+          </div>
+        </div>
+
+        <div className="about-skills">
+          <div>
+            <span>TOOLS & TECHNOLOGIES</span>
+            <h2>A toolkit<br /><em>in progress.</em></h2>
+          </div>
+          <div className="skill-cloud">
+            {profile.skills.map((skill) => <span key={skill}>{skill}</span>)}
+          </div>
+        </div>
+        <div className="about-footer-cta">
+          <p>INTERESTED IN THE WORK?</p>
+          <h2>Start with<br /><em>the projects.</em></h2>
+          <a href={profile.github} target="_blank" rel="noreferrer" className="project-launch project-launch-dark">FIND ME ON GITHUB <Arrow /></a>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function SiteFooter({ navigate }: { navigate: (path: string) => void }) {
+  return (
+    <footer className="site-footer">
+      <button onClick={() => navigate('/')} className="footer-brand">DEEPAK REDDY</button>
+      <span>BUILT WITH CURIOSITY · BENGALURU, INDIA</span>
+      <a href={profile.github} target="_blank" rel="noreferrer">GITHUB <Arrow /></a>
+    </footer>
+  );
+}
+
+export default function App() {
+  const { route, navigate } = useRoute();
+  const project = route.page === 'project' ? projects.find((item) => item.slug === route.slug) : undefined;
+  const projectIndex = project ? projects.findIndex((item) => item.slug === project.slug) : -1;
+
+  useEffect(() => {
+    const theme = project ? 'theme-' + project.theme : route.page === 'about' ? 'theme-about' : 'theme-home';
+    document.body.dataset.theme = theme;
+    document.title = project
+      ? project.name + ' — Deepak Reddy'
+      : route.page === 'about'
+        ? 'About — Deepak Reddy'
+        : 'Deepak Reddy — Software Engineer & Builder';
+  }, [project, route.page]);
+
+  useEffect(() => {
+    if (route.page !== 'project' || projectIndex < 0) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.key === 'ArrowRight') navigate(pathForProject(projects[(projectIndex + 1) % projects.length]));
+      if (event.key === 'ArrowLeft') navigate(pathForProject(projects[(projectIndex - 1 + projects.length) % projects.length]));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navigate, projectIndex, route.page]);
+
+  return (
+    <>
+      <SiteHeader navigate={navigate} active={route.page === 'about' ? 'about' : project ? 'work' : 'home'} />
+      {project ? (
+        <ProjectPage key={project.slug} project={project} navigate={navigate} />
+      ) : route.page === 'about' ? (
+        <AboutPage />
+      ) : (
+        <HomePage navigate={navigate} />
+      )}
+      <SiteFooter navigate={navigate} />
+      {project && <div className="page-index-counter">{project.number} <span>/ 0{projects.length}</span></div>}
+    </>
+  );
+}
