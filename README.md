@@ -72,3 +72,7 @@ src/
   lib/motion.ts   reads motion tokens so JS timing matches CSS
   styles/         tokens.css (design tokens), base.css
 ```
+
+
+### Liquid metal material
+The intro terminal uses Paper's Liquid Metal shader (`@paper-design/shaders-react`, pinned at `0.0.82`) as a full-window material layer. Terminal copy remains DOM content above the canvas. Buddy's persistent Three.js head remains its own reflective 3D mesh for this first pass; the build log records that integration boundary.

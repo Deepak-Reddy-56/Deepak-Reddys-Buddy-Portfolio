@@ -228,3 +228,22 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Run npm run typecheck and npm run build on the branch.
 - Review the Vercel branch preview at desktop and phone widths; carousel wrap, menu position and 3D Buddy flight must be checked together.
 - Real UI captures from the actual projects and a deterministic code-built reel are later tasks; current interface studies are visual placeholders for the carousel structure, not final product captures.
+
+
+## 2026-11-13 — Paper Liquid Metal on the terminal
+
+### Reference basis
+- Read the current Paper Liquid Metal documentation and the published React implementation. The API exposes shape="none" for a full-canvas material layer, plus controls for repetition, softness, chromatic shifts, distortion, contour, angle, speed and scale.
+- Pinned @paper-design/shaders-react to 0.0.82 (and its @paper-design/shaders dependency to the same version). Paper explicitly recommends pinning because breaking changes may ship under 0.0.x.
+- Paper Shaders is Apache-2.0; its LICENSE and NOTICE are included under THIRD_PARTY_LICENSES/.
+
+### Implemented
+- Replaced the dark static terminal backing with the official Paper Liquid Metal shader running across the terminal window.
+- Kept terminal text in the DOM, above the canvas, so it remains crisp, selectable and accessible.
+- Tuned the neutral silver palette, mild chromatic separation, moderate distortion and slower motion for a restrained chrome surface.
+- The existing M3 intro timeline still takes over at Run and morphs into the 3D Buddy, avoiding a second replacement of that carefully timed transition in this first pass.
+- This change adds one temporary WebGL2 shader canvas while the intro is displayed. It is removed with the intro; the existing Buddy renderer and intro morph renderer are unchanged.
+
+### Validation
+- Vercel build and preview are the next checks. Confirm Paper's WebGL2 canvas initializes, terminal text remains legible, and the existing Run hand-off completes without a blank frame.
+- Buddy's persistent 3D material is still the original Three.js reflective chrome model. The Paper shader is now driving the terminal surface; applying the same effect to the 3D head is a separate follow-up because Paper's documented React component renders a 2D canvas mask, while Buddy is a live Three.js mesh.

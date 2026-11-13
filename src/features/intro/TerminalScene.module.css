@@ -6,40 +6,94 @@
   transform: translate(-50%, -50%);
 }
 
-/* ── Window: dark glass with a quiet top reflection ─────────── */
+/* Paper Liquid Metal is the terminal surface, not a decorative page overlay. */
 .window {
   position: relative;
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 38%),
-    #151517;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 224px;
+  border: 1px solid rgba(255,255,255,.58);
+  border-radius: 22px;
+  background: #a5a7af;
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 1px 2px rgba(17, 17, 17, 0.18),
-    0 28px 60px -24px rgba(17, 17, 17, 0.45);
-  color: #ececee;
+    inset 0 1px 0 rgba(255,255,255,.72),
+    inset 0 0 0 1px rgba(35,38,48,.06),
+    0 28px 64px -28px rgba(30,32,44,.35);
+  color: #f8f8fa;
   font-family: var(--font-mono);
   font-size: 14px;
   line-height: 1.7;
   letter-spacing: 0;
-  overflow: hidden;
   animation: window-in 720ms var(--ease-out) 120ms backwards;
   transition:
     opacity 220ms var(--ease-in-out),
     transform 420ms var(--ease-in-out);
 }
 
+.metalLayer {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.paperShader {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.paperShader canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: inherit;
+}
+
+.titlebar,
+.body {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 3px rgba(15,17,25,.55);
+}
+
 .titlebar {
-  padding: 10px 16px 0;
-  color: #6f6f76;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  padding: 10px 20px 0;
+  color: rgba(255,255,255,.82);
   font-size: 11px;
-  text-align: center;
+  font-weight: 550;
+}
+
+.trafficLights {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-right: 2px;
+}
+
+.trafficLights i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.62);
+  box-shadow: 0 1px 3px rgba(20,22,30,.12);
 }
 
 .body {
-  min-height: 168px;
-  padding: 14px 20px 22px;
+  min-height: 184px;
+  padding: 16px 24px 24px;
 }
 
 .line,
@@ -48,41 +102,17 @@
   word-break: break-word;
 }
 
-.comment {
-  color: #6f6f76;
-}
-
-.prompt {
-  color: #8d8d94;
-}
-
-.command {
-  color: #ffffff;
-}
+.comment { color: rgba(255,255,255,.77); }
+.prompt { color: rgba(255,255,255,.87); }
+.command { color: #fff; font-weight: 600; }
 
 .output {
-  color: #a9a9b0;
+  color: rgba(255,255,255,.9);
   animation: line-in 220ms var(--ease-out) both;
 }
 
-.cursor {
-  display: inline-block;
-  width: 0.6em;
-  height: 1.15em;
-  margin-left: 1px;
-  vertical-align: -0.2em;
-  background: #ececee;
-}
-
-.cursor[data-idle] {
-  animation: blink 1.05s steps(1, end) infinite;
-}
-
-/* The shader is now drawing this exact box: let the DOM window go. */
-.scene[data-handed-off] .window {
-  opacity: 0;
-}
-
+/* The shader has taken over this exact box; fade only the DOM content. */
+.scene[data-handed-off] .window { opacity: 0; }
 .scene[data-handed-off] .window * {
   opacity: 0;
   transition: opacity 140ms ease;
@@ -91,10 +121,20 @@
 /* WebGL unavailable: the window recedes instead. */
 .scene[data-fallback-exit] .window {
   opacity: 0;
-  transform: scale(0.94);
+  transform: scale(.94);
 }
 
-/* ── Run row ───────────────────────────────────────────────── */
+.cursor {
+  display: inline-block;
+  width: .6em;
+  height: 1.15em;
+  margin-left: 1px;
+  vertical-align: -.2em;
+  background: #fff;
+}
+.cursor[data-idle] { animation: blink 1.05s steps(1,end) infinite; }
+
+/* Run remains outside the shader surface so the control stays crisp. */
 .runRow {
   display: flex;
   align-items: center;
@@ -107,14 +147,9 @@
 }
 
 .scene[data-handed-off] .runRow,
-.scene[data-fallback-exit] .runRow {
-  opacity: 0;
-}
+.scene[data-fallback-exit] .runRow { opacity: 0; }
 
-.hint {
-  color: var(--color-ink-2);
-  font-size: var(--text-sm);
-}
+.hint { color: var(--color-ink-2); font-size: var(--text-sm); }
 
 .kbd {
   display: inline-block;
@@ -137,56 +172,40 @@
   background: var(--color-bg);
   box-shadow:
     inset 0 0 0 1px var(--color-line),
-    0 4px 12px -6px rgba(17, 17, 17, 0.18);
+    0 4px 12px -6px rgba(17,17,17,.18);
   font-size: var(--text-sm);
   transition:
     box-shadow var(--dur-fast) var(--ease-out),
     transform var(--dur-fast) var(--ease-out);
 }
 
-@media (hover: hover) {
+@media (hover:hover) {
   .run:hover {
     box-shadow:
-      inset 0 0 0 1px rgba(17, 17, 17, 0.16),
-      0 8px 18px -8px rgba(17, 17, 17, 0.25);
+      inset 0 0 0 1px rgba(17,17,17,.16),
+      0 8px 18px -8px rgba(17,17,17,.25);
   }
 }
 
-.run:active {
-  transform: scale(0.97);
-}
+.run:active { transform: scale(.97); }
+.run:disabled { cursor: default; }
 
-.run:disabled {
-  cursor: default;
-}
-
-@media (max-width: 640px) {
-  .window {
-    font-size: 13px;
-  }
-
-  .body {
-    min-height: 150px;
-    padding: 12px 16px 18px;
-  }
+@media (max-width:640px) {
+  .window { min-height: 210px; font-size: 13px; border-radius: 19px; }
+  .body { min-height: 164px; padding: 12px 16px 18px; }
+  .titlebar { padding-left: 16px; }
 }
 
 @keyframes window-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.985);
-  }
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
 }
-
 @keyframes line-in {
-  from {
-    opacity: 0;
-    transform: translateY(3px);
-  }
+  from { opacity: 0; transform: translateY(3px); }
+}
+@keyframes blink {
+  50% { opacity: 0; }
 }
 
-@keyframes blink {
-  50% {
-    opacity: 0;
-  }
+@media (prefers-reduced-motion:reduce) {
+  .window,.runRow,.output { animation: none; }
 }
