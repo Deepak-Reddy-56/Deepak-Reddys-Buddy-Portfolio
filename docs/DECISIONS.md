@@ -36,3 +36,26 @@
 - `FrameLoop` reads `performance.now()` (same timebase as CSS transitions/timers) rather than the rAF timestamp.
 - Timing probe (`introDebug.ts`) exists only in dev/QA builds (`?introDebug`); stripped from production.
 - Fallback reveals the page behind the terminal before it recedes; any draw failure or context loss finishes to the page.
+
+## 2026-11-12 — M3
+- **three.js directly, not React Three Fiber.** One character, one imperative controller, render-on-demand and a single clock; R3F would add a reconciler (~45 kB) and its own frame loop. three.js is lazy-loaded (own chunk, 134 kB gzip); main bundle +2 kB.
+- **No GSAP / Lenis.** The flight is a pure function of scroll (`flight.ts`) plus a spring for catch-up; neither library added capability. Lenis stays a candidate if real devices show fixed-canvas vs. scroll desync.
+- **One persistent canvas over the page** with an orthographic camera in CSS pixels → Buddy lands exactly on DOM-measured seats. `pointer-events: none`; z between the menu sheet and the controls.
+- **Seats as DOM anchors.** `BuddySeat` reserves space; the 3D Buddy is the only character. Static placeholders remain as the reduced-motion / no-WebGL fallback.
+- **Journey model.** Seated = glued to his seat; flights are tied to scroll (reversible), arrive when the next seat reaches the arrival line (36 % desktop, 30 % mobile) and take 0.7 / 0.55 viewport heights of scroll. Fast jumps switch to a speed-limited critically damped spring.
+- **Long sections:** Buddy stays at a section's opening (he scrolls out of view with it while you read a long section) and flies back in for the next one. Alternative for review: a margin "dock" while his seat is off-screen.
+- **Voice:** pluggable provider; Web Speech API for now. Quality varies: Safari/macOS/iOS and Chrome (Google voices) are good; Firefox uses OS voices; Android uses Google TTS; some Linux setups have none (caption only). No prerecorded asset, no paid TTS.
+- **Intro hand-off:** with the 3D Buddy active the intro settles into a chrome ellipsoid of his silhouette (the CSS-card settle remains for the static fallback).
+- **Performance:** scissor rendering of Buddy's box only; sleep when idle; QA manual clock and debug hooks behind a compile-time `__DEBUG__` constant.
+
+## 2026-11-12 — M3 refinement
+- **Long sections:** Buddy stays attached to the section's opening seat and scrolls out with it; he reappears at the next seat. Not docked in a margin (owner decision).
+- **Routing over content:** flights are planned on a grid of real text line boxes and controls, inflated by Buddy's size. Order of preference: full-size route → tucked route (55 % size) → hop. A hop is preferred over any route that would cross readable content. Desktop routes prefer the open right side; the chapter rail column and the band under the top controls are off-limits during flight.
+- **Speed:** journey progress is speed-limited (2.4 legs/s desktop, 2 on mobile), so a flick makes him fly his route quickly rather than teleport; arrival tolerance ±0.003 legs.
+- **Material:** pearl-silver chrome lit by a procedural softbox studio (no HDRI download), with cyan/rose gels for a subtle rim iridescence; the intro shader blends to the same studio as the face forms.
+- **Voice stays free and local:** Web Speech API only; primed in the user's gesture; no paid or external TTS.
+
+## 2026-11-13 — M3 mobile and laptop flights
+- **Edge corridor instead of hops.** At 390 the text column spans 20–370 px. Any on-screen path between two sections would have to cross a full-width text line, so no on-screen corridor exists. Buddy instead flies out along the empty seat row, runs just past the screen edge, and sweeps back in. He never pops in or out of existence.
+- **Minimum flight scale 70 %, normally 80 %.** If a visible route needs less than 70 %, the route changes (edge corridor) rather than shrinking him further.
+- **Time follows visibility.** Hidden stretches are flown quickly so the visible part of each flight gets most of the scroll distance.

@@ -27,6 +27,7 @@ uniform float u_chrome;      // 0 dark glass → 1 chrome
 uniform float u_face;        // eyes/mouth 0..1 (scale, may overshoot)
 uniform float u_blink;       // 0 open → 1 closed
 uniform float u_settle;      // liquid chrome → exact placeholder look (hand-off)
+uniform float u_talk;        // 0..1 mouth opening while Buddy speaks
 uniform float u_alpha;
 
 ${glslNoise}
@@ -91,7 +92,7 @@ void main() {
     tilt += u_liquid * 0.3 * (vec2(fbm2(q * 0.008 + u_time * 0.6), fbm2(q * 0.008 - u_time * 0.5 + 9.0)) - 0.5);
     vec3 N = normalize(vec3(tilt.x, -tilt.y, 1.0));
 
-    vec3 chrome = shadeChrome(N, u_time, 1.0, q.x * 0.0015 + u_time * 0.04);
+    vec3 chrome = shadeChrome(N, u_time, 1.0 - 0.6 * u_face, q.x * 0.0015 + u_time * 0.04, u_face);
     vec3 r = reflect(vec3(0.0, 0.0, -1.0), N);
     vec3 glass = vec3(0.082, 0.082, 0.09) + studioEnv(r, u_time) * 0.045 + 0.03 * smoothstep(0.3, 1.0, -q.y / u_half.y);
     color = mix(glass, chrome, u_chrome);
@@ -128,6 +129,8 @@ void main() {
       float outer = sdEllipse(m, vec2(0.045, 0.042));
       float inner = sdEllipse(m, vec2(0.032, 0.029));
       float mouth = (1.0 - smoothstep(-faa, faa, outer)) * smoothstep(-faa, faa, inner) * step(0.0, m.y);
+      float openMouth = 1.0 - smoothstep(-faa, faa, sdEllipse(m - vec2(0.0, 0.022), vec2(0.036, 0.004 + 0.024 * u_talk)));
+      mouth = max(mouth, openMouth * step(0.02, u_talk));
       color = mix(color, hex(13.0, 13.0, 15.0), mouth * clamp(u_face, 0.0, 1.0));
     }
   }

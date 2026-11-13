@@ -10,7 +10,7 @@
  * over-budget counts, not by average fps.
  */
 export const introDebugEnabled =
-  (import.meta.env.DEV || import.meta.env.VITE_INTRO_DEBUG === '1') &&
+  __DEBUG__ &&
   typeof window !== 'undefined' &&
   new URLSearchParams(window.location.search).has('introDebug');
 

@@ -30,7 +30,7 @@ export function BuddySeat({ seat, size, line, className }: BuddySeatProps) {
       </span>
       <figcaption className={styles.caption}>
         <span className="visually-hidden">Buddy says: </span>
-        <TwoTone as="span" lead={line.lead} rest={line.rest} className={styles.line} words={size === 'hero'} />
+        <TwoTone as="span" lead={line.lead} rest={line.rest} className={styles.line} words />
       </figcaption>
     </figure>
   );

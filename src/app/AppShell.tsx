@@ -5,6 +5,7 @@ import { ScrollProgress } from '../components/shell/ScrollProgress';
 import { SectionRail } from '../components/shell/SectionRail';
 import { SiteFooter } from '../components/shell/SiteFooter';
 import { sectionIds, type SectionId } from '../content/sections';
+import { BuddyStage } from '../features/buddy/BuddyStage';
 import { IntroSequence } from '../features/intro/IntroSequence';
 import { useIntroGate } from '../features/intro/useIntroGate';
 import { useActiveSection } from '../hooks/useActiveSection';
@@ -95,6 +96,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
         <SiteFooter onReplayIntro={replay} />
       </div>
+
+      <BuddyStage menuOpen={menu.isOpen} />
 
       {intro.active ? (
         <IntroSequence

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { soundEngine } from '../lib/audio/soundEngine';
+import { buddyVoice } from '../lib/voice/voice';
 
 const STORAGE_KEY = 'buddy:sound';
 
@@ -36,7 +37,10 @@ export function useSoundPreference() {
     soundEngine.unlock();
     soundEngine.setEnabled(next);
     enabledRef.current = next;
-    if (next) soundEngine.play('toggle');
+    if (next) {
+      soundEngine.play('toggle');
+      buddyVoice.prime();
+    }
     store(next);
     setEnabledState(next);
   }, []);

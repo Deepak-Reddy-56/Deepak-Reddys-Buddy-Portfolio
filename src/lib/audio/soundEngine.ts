@@ -25,6 +25,11 @@ class SoundEngine {
     return this.context?.state === 'running';
   }
 
+  /** The visitor's sound preference (independent of whether audio is unlocked yet). */
+  get isEnabled(): boolean {
+    return this.enabled;
+  }
+
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
   }

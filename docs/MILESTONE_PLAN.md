@@ -21,14 +21,13 @@ A visitor should feel that they have entered a small, thoughtful digital world�
 - First-visit only; reduced-motion and no-WebGL paths.
 **Acceptance:** see `docs/M2_ACCEPTANCE.md`.
 
-## M3 — Buddy prototype
-**Goal:** original character with presence and personality.
-- Own geometry and silhouette, facial features, eye direction, expressions.
-- Idle, greet, attentive, curious, celebrate, and sleep states.
-- Pointer gaze and gentle motion; no motion that blocks reading.
-- Character occupies reserved layout space, never overlays content.
-- Mobile performance fallback and static poster.
-**Acceptance:** character feels intentional at common device sizes and maintains stable frame rate.
+## M3 — Buddy, a real 3D character (implemented, awaiting review)
+**Goal:** one persistent, expressive 3D Buddy who flies between DOM seats as the visitor scrolls, speaks his first line, and guides each section.
+- Procedural chrome model, studio environment, expressions, blinking, gaze.
+- Scroll-driven journey (Hero → About → Work → Contact, reversible), catch-up spring, landing, menu flight.
+- Section dialogue on arrival; spoken intro via a pluggable voice.
+- Static fallback for reduced motion / no WebGL.
+**Acceptance:** see `docs/M3_ACCEPTANCE.md`.
 
 ## M4 — Home story and project carousel
 **Goal:** connect the introduction to real work.

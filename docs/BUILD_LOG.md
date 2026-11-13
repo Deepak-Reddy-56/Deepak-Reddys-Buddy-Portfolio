@@ -126,3 +126,75 @@ After fixes (software GL, so absolute values are not representative of a GPU): 1
 - **Build/test:** typecheck ✓ · build ✓ (86 kB gzip JS) · functional suite ✓ (1440/1024/390, reduced motion, no-WebGL, sound, skip/replay) · frame-accurate capture ✓ (3.6 s, hand-off ≈1.6/255) · audio capture ✓ · debug isolation ✓.
 - **Known issues:** GPU frame rate unverified (sandbox is software-rendered; use `npm run dev` → `/?intro&introDebug`) · sound character needs owner ear-test · draft copy, contact details, VROOM/InternPilot URLs pending · placeholder Buddy to be replaced by an original 3D Buddy in M3.
 - **Exact next task:** owner opens the preview signed in (or disables preview protection) and runs the probe on a real device; then plan M3 (Buddy 3D character and animation system) for approval.
+
+## 2026-11-12 — M3: Buddy, a real 3D character
+
+### What changed
+- New `src/features/buddy/`: `three/buddyModel.ts` (procedural model), `three/studioEnvironment.ts` (procedural PMREM studio), `three/BuddyRenderer.ts` (one WebGL context, ortho camera in CSS px, scissor rendering), `three/createBuddy.ts` (lazy entry), `BuddyDirector.ts` (one clock: scroll → journey → flight → pose → face → dialogue → render; sleeps when idle), `flight.ts` (pure journey maths), `expressions.ts`, `BuddyStage.tsx`.
+- New `src/lib/voice/voice.ts` (pluggable voice, Web Speech provider, `sayOnce`, talk envelope), `src/lib/debug.ts`; `__DEBUG__` compile-time constant (vite.config.ts) — debug hooks removed from production.
+- `FrameLoop`: QA-only manual clock (`?manualClock`). `soundEngine.isEnabled`.
+- Dialogue config (`content/dialogue.ts`): hero "Hey, I'm Buddy!", About/Work/Contact drafts, seat expressions, spoken line.
+- Small, opt-in M1/M2 edits: AppShell mounts `BuddyStage`; About gets a seat; seats reveal their line on arrival (`data-buddy-active`); placeholders hidden in 3D mode; TwoTone word hook + delay variable; intro speaks, animates the mouth (`u_talk`) and settles into the 3D silhouette when the 3D Buddy is active.
+- Dependency: `three@0.181.2` (+ `@types/three`), lazy chunk 134 kB gzip; main bundle +2 kB.
+
+### Found and fixed during QA
+- Full-viewport fill made each frame expensive → scissor-render Buddy's box only.
+- Menu seat measured once (didn't exist yet) → looked up live; Buddy now flies into the menu.
+- Fast flicks dragged Buddy through intermediate seats → speed-limited critically damped spring catch-up (threshold 0.25 legs/frame), with a quick hand-back.
+- Mid-flight speed peaked at 3× (cubic ease) → sine ease (≈1.6×).
+- First blink scheduled at 2500 s (unit slip) → 2.5 s; he blinks now.
+- Desktop flights alternated sides and could swing back across text → always bow into the open right side.
+- Intro→3D hand-off settled into the CSS card look → ellipsoid chrome settle when 3D is active; materials converged (brightness 225.2 vs 225.8).
+- Director timers mixed wall time and loop time → one clock.
+
+### Validation
+Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing error at all 7 pauses per width (incl. backwards and fast flicks), seated frames move exactly with the page, catch-up within its speed cap. Functional: voice once/replay/sound-off, single canvas, click-through, menu flight, resize re-alignment, reduced motion and no-WebGL fallbacks, no console errors. Idle: renders only around blinks after the 7.5 s bob window. Typecheck ✓ · build ✓.
+
+## Checkpoint — 2026-11-12 (M3 implemented, awaiting review)
+- **Milestone:** M3 on `m3-buddy-character` (from `5899c1d`), **uncommitted**, not pushed. `main`, `m1-visual-foundation`, `m2-introduction` untouched.
+- **Latest commit on branch:** `5899c1d` (M2 checkpoint).
+- **Build/test:** typecheck ✓ · build ✓ (main 88 kB gzip + lazy three chunk 134 kB) · journeys ✓ · functional ✓.
+- **Known issues:** GPU frame rate and real-device scroll sync unverified (sandbox is software-rendered) · Web Speech voice quality varies by browser/OS; no voices in the sandbox, so speech audio itself is unheard here (call timing/once-ness verified) · intro→3D reflections differ in detail (≈10.7/255) · Buddy scrolls out of view with long sections (by design; review) · flights cross text briefly at desktop · large hero Buddy passes behind the controls on mobile during the first flight.
+- **Exact next task:** owner reviews M3 recordings/stills; on approval commit `feat(m3): …`, push `m3-buddy-character`, verify the Vercel preview on a real device.
+
+## 2026-11-12 — M3 refinement pass (routing, material, voice)
+
+### What changed
+- **Decision 1 (owner):** in long sections Buddy stays on his seat and scrolls out with it; he reappears for the next section. No margin docking.
+- **Whitespace-aware routing** — new `src/features/buddy/route.ts` (pure). Content (every text line box, links, buttons, list items, badges) is rasterised into a grid, inflated by Buddy's half-size plus a margin; A* (with a closed set, corridor-centre and desktop right-side preference) finds a route; it is string-pulled and its corners rounded only where they stay clear; arc-length parametrised. Per leg: full size if there's room → a *tucked* route at 55 % size (restrained) → otherwise a *hop* (shrink at the old seat, pop in at the next; never crosses content). Seats' own captions are excluded (hidden while he's away). The fixed chapter rail is a closed column; flights ease below the fixed top controls.
+- `BuddyDirector`: journey J now follows the scroll with an exact critically damped spring, speed-limited per config (no overshoot); ±0.003-leg arrival tolerance (fractional scroll positions); routes re-planned on resize (debounced). `flight.ts` keeps only the journey maths; desktop / laptop / mobile configs.
+- **Material:** pearl-silver chrome (`#f3f4f7`, roughness 0.045, clearcoat, iridescence 0.5). New studio: pearl sky over a darker floor with a white-tabletop bounce, one defined horizon ribbon, two warped sky ribbons, crisp rectangular softboxes (key, long top strip, right rim, low fill) and cyan/rose gels behind for a subtle iridescent rim. Proportions unchanged.
+- **Intro hand-off:** the shader blends from its liquid studio into a matching "product studio" as the face forms (`shadeChrome(..., studio = u_face)`), so the crossfade lands on the new look.
+- **Voice:** cached voice list (`voiceschanged`), speech primed inside the run / sound-toggle gesture (iOS Safari), `not-allowed`/errors recorded instead of silently failing, idle queue no longer cancelled (Safari), line requested at `face[0] + 60` to absorb engine latency.
+
+### Validation (headless Chrome, SwiftShader)
+- Journeys 1440/1024/390 (manual clock, 30 fps; normal, fast, reverse; full Work section): 0.0 px landing error at all 7 pauses per width; seated frames move exactly with the page; **0 frames** overlapping text/badges/buttons/media/nav at 1440; 1 frame each at 1024/390, only at the instant of a 9,600 px/s flick off the hero (his own fading caption / still glued under the menu button).
+- Legs: 1440 route·route·route; 1024 route·tucked·hop; 390 route·hop·hop.
+- Voice (scripted speechSynthesis with latency and boundary events): ranked natural voice chosen from the late-loading list; mouth opens only between engine start and end (0.37–0.78); caption reveals as audio starts; sound off → no speech and no priming.
+- Flows: single canvas, menu flight, resize re-seat, reduced motion and no-WebGL fallbacks, no console errors. Production bundle: 0 debug strings. Intro hand-off mean difference 13.3/255 (was 10.7; mostly the existing card↔3D geometry offset).
+
+## Checkpoint — 2026-11-12 (M3 refinement, awaiting review)
+- **Milestone:** M3 + refinement on `m3-buddy-character`, **uncommitted**, not pushed. `main`, `m1-visual-foundation`, `m2-introduction` untouched.
+- **Build/test:** typecheck ✓ · build ✓ (main 89 kB gzip + lazy three chunk 137 kB) · journeys ✓ · voice sync (mock) ✓ · flows ✓.
+- **Known issues:** GPU frame rate and real-device scroll feel unverified (no GPU in sandbox) · real TTS audio unheard (no voices in sandbox; Chrome/Safari need a prior gesture — the intro run provides it, a returning visitor with saved sound who scrolls without clicking gets the caption only) · mobile flights are hops (no gutter at 390) · intro→3D hand-off ≈13/255.
+- **Exact next task:** owner reviews recordings; on a real device check the voice and scroll feel; on approval commit `feat(m3): …` and push `m3-buddy-character`.
+
+## 2026-11-13 — M3 refinement: visible mobile and laptop flights
+
+### What changed
+- **No more hops.** The planner may now use an off-screen band just past each side edge (`RouteOptions.offstage`), at extra cost so on-screen corridors always win. Where text spans the full width (390 px: 20 px margins), Buddy flies out along the seat row, runs down just past the screen edge, and sweeps back in across the empty row into the next seat — continuous and scroll-linked, never over content.
+- **Scale tiers:** fully visible route at 100 % → 80 % → 70 %; otherwise the edge corridor at 80 %. The 55 % tucked route is gone (minimum flight size now 58 px at 1024/390).
+- **Visibility-aware timing** (`retime`): stretches off screen both when a leg starts and when it ends are flown at 15 % of their length, so the leg's time goes to the part you can see. The path itself is unchanged.
+- Mobile routes bias right (`rightBias 0.6`) so the visible approach crosses the whole seat row instead of a short left-edge entry.
+
+### Validation (manual clock, 30 fps)
+- 390: hero→About fully visible; About→Work visible 15/30 frames (curved sweep in from the right), Work→Contact 13/30; reverse 20/42. 0 content overlap (1 frame at a 9,600 px/s flick, still glued under the menu button). 0.0 px landing at all 7 pauses.
+- 1024: About→Work at 80 % via the left margin (visible 22/25; the 60 px gap between the About columns cannot hold even a 70 % Buddy with clearance); Work→Contact at 80 % via the right edge. 0.0 px landings; 1 frame touching his own fading caption during the extreme flick.
+- 1440 unchanged (all routes on screen at full size; 0 overlap).
+- Planning cost: ~40–47 ms total per load/resize (debounced, sandbox CPU); per-frame cost unchanged.
+- Flows: voice, single canvas, menu, resize, reduced motion, no-WebGL ✓. Typecheck ✓ · build ✓ (lazy chunk 137.7 kB gzip) · 0 debug strings in production.
+
+## Checkpoint — 2026-11-13 (M3 final refinement, awaiting approval)
+- **Branch:** `m3-buddy-character` @ `5899c1d` + uncommitted M3 work. Not pushed; M4 not started.
+- **Known issues:** GPU frame rate and real-device scroll feel unverified · real TTS audio unheard in sandbox · on mobile the middle of each long flight is off screen (the long-section rule plus 20 px margins; see DECISIONS).
+- **Exact next task:** owner reviews the 390/1024 recordings; on approval commit `feat(m3): …` and push `m3-buddy-character`.

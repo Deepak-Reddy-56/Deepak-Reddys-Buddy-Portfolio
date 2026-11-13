@@ -28,3 +28,10 @@ The Adam Perlis reference is the inspiration for material, scale, and the role o
 
 ## States to design
 Idle · Hello · Curious · Listening · Proud · Thinking · Sleep
+
+## Implementation (M3)
+- Model: `src/features/buddy/three/buddyModel.ts` (procedural; body 2 × 1.68 × 1.6 units; face uses the placeholder's proportions).
+- Material & light: `MeshPhysicalMaterial` chrome + `studioEnvironment.ts` (procedural PMREM studio).
+- Expressions: `src/features/buddy/expressions.ts`; seat → expression map in `src/content/dialogue.ts`.
+- Movement & behaviour: `src/features/buddy/BuddyDirector.ts` (one clock) + `flight.ts` (pure journey maths).
+- Voice: `src/lib/voice/voice.ts` (pluggable provider, `sayOnce`, talk envelope).

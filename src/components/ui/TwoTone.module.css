@@ -19,7 +19,7 @@
   transition:
     opacity 420ms var(--ease-out),
     transform 420ms var(--ease-out);
-  transition-delay: calc(var(--w, 0) * 55ms + 520ms);
+  transition-delay: calc(var(--w, 0) * 55ms + var(--word-delay, 120ms));
 }
 
 :global(html[data-intro='playing']) .word {

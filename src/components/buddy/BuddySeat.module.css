@@ -70,3 +70,17 @@
   opacity: 0;
   transition: none;
 }
+
+/* ── 3D Buddy active (html[data-buddy='3d']) ────────────────────
+   Seats become reserved space only; the one 3D Buddy flies between them.
+   A seat's line appears when he lands there and fades when he leaves. */
+:global(html[data-buddy='3d']) .slot > * {
+  visibility: hidden;
+}
+
+:global(html[data-buddy='3d']) .seat:not([data-buddy-active]) [data-word] {
+  opacity: 0;
+  transform: translateY(4px);
+  transition-duration: 220ms;
+  transition-delay: 0ms;
+}

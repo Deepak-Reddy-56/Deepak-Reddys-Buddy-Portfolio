@@ -1,6 +1,8 @@
+import { BuddySeat } from '../../components/buddy/BuddySeat';
 import { Action } from '../../components/ui/Action';
 import { SectionLabel } from '../../components/ui/SectionLabel';
 import { TwoTone } from '../../components/ui/TwoTone';
+import { dialogue } from '../../content/dialogue';
 import { projects } from '../../content/projects';
 import { getSection } from '../../content/sections';
 import { site } from '../../content/site';
@@ -21,6 +23,7 @@ export function AboutSection() {
   return (
     <section id="about" className={section.section} aria-labelledby="about-label">
       <div className={section.wide}>
+        <BuddySeat seat="about" size="inline" line={dialogue.about} className={section.opener} />
         <div className={section.label}>
           <SectionLabel number={number} label={label} id="about-label" />
         </div>

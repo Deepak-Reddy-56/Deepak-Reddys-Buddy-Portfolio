@@ -40,7 +40,11 @@ export function boxFromRect(rect: DOMRect): Box {
   return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, hw: rect.width / 2, hh: rect.height / 2 };
 }
 
-export function introUniforms(t: number, from: Box, to: Box, radius: number): IntroUniforms {
+/**
+ * `settleToCard`: end as an exact image of the CSS placeholder (static fallback).
+ * When the 3D Buddy takes over instead, stay liquid chrome on his ellipsoid silhouette.
+ */
+export function introUniforms(t: number, from: Box, to: Box, radius: number, settleToCard = true): IntroUniforms {
   const move = easeInOutCubic(progress(t, ...marks.move));
   const size = easeOutBack(progress(t, ...marks.move), 0.9);
   const morph = easeInOutCubic(progress(t, ...marks.morph));
@@ -58,7 +62,7 @@ export function introUniforms(t: number, from: Box, to: Box, radius: number): In
   const blinkP = progress(t, ...marks.blink);
   const blink = blinkP > 0 && blinkP < 1 ? Math.sin(Math.PI * blinkP) : 0;
 
-  const settle = easeInOutCubic(progress(t, marks.face[0] - 350, marks.handoff[0]));
+  const settle = settleToCard ? easeInOutCubic(progress(t, marks.face[0] - 350, marks.handoff[0])) : 0;
   // Invisible until the shader takes over the terminal's box; fades out at the hand-off.
   const alpha = t < marks.swapStart ? 0 : 1 - progress(t, ...marks.handoff);
 

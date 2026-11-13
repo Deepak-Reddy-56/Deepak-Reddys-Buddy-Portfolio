@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { soundEngine } from '../../lib/audio/soundEngine';
+import { buddyVoice } from '../../lib/voice/voice';
+import { spokenIntro } from '../../content/dialogue';
 import { FrameLoop } from '../../lib/frameLoop';
 import { supportsWebGL, type ShaderStage } from '../../lib/webgl/ShaderStage';
 import { createTimingProbe, introDebugEnabled } from './introDebug';
@@ -56,6 +58,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
   const stageRef = useRef<ShaderStage | null>(null);
   const loopRef = useRef<FrameLoop | null>(null);
   const stepRef = useRef<Step>('typing');
+  const runId = useRef(`intro-${Math.random().toString(36).slice(2)}`);
   const finished = useRef(false);
 
   const goTo = useCallback((next: Step) => {
@@ -67,6 +70,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     (reason: IntroEnd) => {
       if (finished.current) return;
       finished.current = true;
+      if (reason === 'skip') buddyVoice.cancel();
       loopRef.current?.dispose();
       loopRef.current = null;
       setIntroState(null);
@@ -115,6 +119,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     const current = stepRef.current;
     if (current !== 'typing' && current !== 'ready') return;
     soundEngine.unlock();
+    buddyVoice.prime();
     soundEngine.play('enter');
     setTyped(COMMAND.length);
 
@@ -137,6 +142,8 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     window.addEventListener('resize', onResize);
 
     const m = useShader ? marks : fallbackMarks;
+    // Hand-off target: the 3D Buddy (if it has loaded) or the static placeholder.
+    const toThreeD = document.documentElement.dataset.buddy === '3d';
     const fired = new Set<string>();
     const once = (key: string, condition: boolean, action: () => void) => {
       if (condition && !fired.has(key)) {
@@ -158,10 +165,14 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
         setIntroState('leaving');
       });
       once('handoff', t >= m.handoff[0], () => setIntroState('handoff'));
+      if (!useShader) once('speak', t >= m.handoff[0], () => buddyVoice.sayOnce(runId.current, spokenIntro));
 
       if (useShader && stage && from && to && stageRef.current === stage) {
         once('blip', t >= marks.face[0] + 120, () => soundEngine.play('blip'));
-        const u = introUniforms(t, from, to, TERMINAL_RADIUS);
+        // "Hey, I'm Buddy!" — once per run, only with sound on (the run itself was the gesture).
+        // Asked for a little before the face finishes forming: engines take ~50–300 ms to start.
+        once('speak', t >= marks.face[0] + 60, () => buddyVoice.sayOnce(runId.current, spokenIntro));
+        const u = introUniforms(t, from, to, TERMINAL_RADIUS, !toThreeD);
         stage.set('u_time', t / 1000);
         stage.set('u_center', u.center);
         stage.set('u_half', u.half);
@@ -173,6 +184,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
         stage.set('u_face', u.face);
         stage.set('u_blink', u.blink);
         stage.set('u_settle', u.settle);
+        stage.set('u_talk', buddyVoice.talk(performance.now()));
         stage.set('u_alpha', u.alpha);
         try {
           stage.draw();

@@ -1,0 +1,17 @@
+/* Above the page and the menu sheet (Buddy flies into it), below the controls. Never takes input. */
+.canvas {
+  position: fixed;
+  z-index: var(--z-buddy);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transition: opacity 260ms var(--ease-in-out);
+}
+
+/* The intro draws Buddy itself until the hand-off. */
+:global(html[data-intro='playing']) .canvas,
+:global(html[data-intro='leaving']) .canvas {
+  opacity: 0;
+  transition: none;
+}

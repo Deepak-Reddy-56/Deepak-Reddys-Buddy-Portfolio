@@ -4,9 +4,21 @@
  * - caps per-frame delta so a stalled or hidden tab never skips ahead,
  * - cleans up after itself on dispose().
  */
+import { debugFlag } from './debug';
+
 export type TickCallback = (timeMs: number, deltaMs: number) => void;
 
 const MAX_DELTA_MS = 1000 / 30;
+
+/**
+ * QA only (`?manualClock` in dev/QA builds): loops don't use rAF; a test drives
+ * them with window.__frameStep(ms) for frame-exact recordings. Off in production.
+ */
+const manual = __DEBUG__ && debugFlag('manualClock');
+const manualLoops = new Set<FrameLoop>();
+if (manual) {
+  (window as unknown as { __frameStep?: (ms: number) => void }).__frameStep = (ms) => manualLoops.forEach((loop) => loop.step(ms));
+}
 
 export class FrameLoop {
   private frame = 0;
@@ -17,6 +29,7 @@ export class FrameLoop {
 
   constructor(private readonly onTick: TickCallback) {
     document.addEventListener('visibilitychange', this.handleVisibility);
+    if (manual) manualLoops.add(this);
   }
 
   get time(): number {
@@ -26,7 +39,14 @@ export class FrameLoop {
   start(): void {
     if (this.disposed) return;
     this.running = true;
-    this.schedule();
+    if (!manual) this.schedule();
+  }
+
+  /** Advance by exactly `ms` (manual-clock QA mode). */
+  step(ms: number): void {
+    if (!this.running || this.disposed) return;
+    this.elapsed += ms;
+    this.onTick(this.elapsed, ms);
   }
 
   stop(): void {
@@ -39,6 +59,7 @@ export class FrameLoop {
   dispose(): void {
     this.stop();
     this.disposed = true;
+    manualLoops.delete(this);
     document.removeEventListener('visibilitychange', this.handleVisibility);
   }
 

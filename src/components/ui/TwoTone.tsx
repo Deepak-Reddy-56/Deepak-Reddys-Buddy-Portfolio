@@ -13,7 +13,7 @@ function Words({ text, offset }: { text: string; offset: number }) {
   return text.split(' ').map((word, index) => (
     <Fragment key={index}>
       {index > 0 ? ' ' : null}
-      <span className={styles.word} style={{ '--w': offset + index } as CSSProperties}>
+      <span className={styles.word} data-word style={{ '--w': offset + index } as CSSProperties}>
         {word}
       </span>
     </Fragment>
