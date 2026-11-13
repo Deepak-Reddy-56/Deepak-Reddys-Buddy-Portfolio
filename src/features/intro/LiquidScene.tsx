@@ -5,51 +5,78 @@ import styles from './LiquidScene.module.css';
 
 type LiquidSceneProps = {
   stageRef: RefObject<ShaderStage | null>;
+  active: boolean;
   onReady: () => void;
-  onUnavailable: () => void;
+  onUnavailable: (reason?: string) => void;
 };
 
-/**
- * Scenes B and C — the canvas where the terminal turns to liquid chrome and
- * settles into Buddy. The stage is created, compiled and warmed on mount; it
- * then draws only when the orchestrator's clock asks it to.
- */
-export function LiquidScene({ stageRef, onReady, onUnavailable }: LiquidSceneProps) {
+/** Compile, render and read back an actual pixel before we claim this shader is ready. */
+export function LiquidScene({ stageRef, active, onReady, onUnavailable }: LiquidSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     let stage: ShaderStage | null = null;
+    let warm = 0;
+
     try {
-      stage = new ShaderStage(canvas, liquidChromeFragment, { onContextLost: onUnavailable });
+      stage = new ShaderStage(canvas, liquidChromeFragment, {
+        onContextLost: () => onUnavailable('The browser lost the Liquid Chrome WebGL context.'),
+      });
       stageRef.current = stage;
+
+      warm = window.setTimeout(() => {
+        if (!stage || stage.width < 2 || stage.height < 2) {
+          onUnavailable('The Liquid Chrome canvas has no measurable size.');
+          return;
+        }
+
+        try {
+          const halfW = Math.max(36, Math.min(100, stage.width * 0.18));
+          const halfH = Math.max(30, Math.min(80, stage.height * 0.18));
+          stage.set('u_time', 0);
+          stage.set('u_center', [stage.width * 0.5, stage.height * 0.5]);
+          stage.set('u_half', [halfW, halfH]);
+          stage.set('u_radius', 22);
+          stage.set('u_morph', 0);
+          stage.set('u_liquid', 0);
+          stage.set('u_chrome', 1);
+          stage.set('u_face', 0);
+          stage.set('u_smile', 0);
+          stage.set('u_blink', 0);
+          stage.set('u_settle', 0);
+          stage.set('u_talk', 0);
+          stage.set('u_alpha', 1);
+          stage.draw();
+
+          const pixel = stage.readPixelCss(stage.width * 0.5, stage.height * 0.5);
+          const visible = pixel[3] >= 200 && pixel[0] + pixel[1] + pixel[2] > 12;
+          if (!visible) {
+            throw new Error('Shader compiled but its center pixel was transparent/black (RGBA ' + Array.from(pixel).join(',') + ').');
+          }
+
+          stage.set('u_alpha', 0);
+          stage.draw();
+          onReady();
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          console.error('[intro] Liquid Chrome render probe failed:', error);
+          onUnavailable(reason);
+        }
+      }, 120);
     } catch (error) {
-      console.error('[intro] Liquid Chrome shader failed to compile or initialize:', error);
-      onUnavailable();
+      const reason = error instanceof Error ? error.message : String(error);
+      console.error('[intro] Liquid Chrome shader failed to initialize:', error);
+      onUnavailable(reason);
     }
-    // Warm-up: drivers finish building the GPU pipeline on the first draw. Do one
-    // invisible draw while the terminal types, so pressing Run never hitches.
-    const warm = window.setTimeout(() => {
-      if (!stage) return;
-      try {
-        stage.set('u_alpha', 0);
-        stage.set('u_half', [1, 1]);
-        stage.draw();
-        onReady();
-      } catch (error) {
-        console.error('[intro] Liquid Chrome shader warm-up failed:', error);
-        onUnavailable();
-      }
-    }, 120);
+
     return () => {
       window.clearTimeout(warm);
       stage?.dispose();
-      stageRef.current = null;
+      if (stageRef.current === stage) stageRef.current = null;
     };
   }, [stageRef, onReady, onUnavailable]);
 
-  // Always composited (transparent until the shader's own alpha rises at the swap):
-  // first-time canvas compositing is expensive, so it happens while the terminal types.
-  return <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />;
+  return <canvas ref={canvasRef} className={styles.canvas} data-active={active ? 'true' : undefined} aria-hidden="true" />;
 }

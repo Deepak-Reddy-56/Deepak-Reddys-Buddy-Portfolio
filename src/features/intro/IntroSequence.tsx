@@ -23,10 +23,6 @@ type IntroSequenceProps = {
   onFinish: (reason: IntroEnd) => void;
 };
 
-/** Marks used when WebGL is unavailable: the terminal recedes, the page fades up. */
-// Page and Buddy emerge behind the terminal *before* it recedes, so no frame is ever empty.
-const fallbackMarks = { outputEnd: 620, swapStart: 780, revealPage: [480, 1180], handoff: [480, 740], done: 1400 } as const;
-
 const TERMINAL_RADIUS = 22;
 const HERO_SLOT = '[data-buddy-seat="hero"] [data-buddy-slot]';
 
@@ -68,6 +64,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
   const [webgl, setWebgl] = useState(true);
   const [shaderReady, setShaderReady] = useState(false);
   const [shaderTransition, setShaderTransition] = useState(false);
+  const [shaderError, setShaderError] = useState<string | null>(null);
   const [touch] = useState(() => window.matchMedia('(hover: none)').matches);
 
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -101,14 +98,20 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
 
   const skip = useCallback(() => finish('skip'), [finish]);
   const markShaderReady = useCallback(() => setShaderReady(true), []);
-  const markUnavailable = useCallback(() => {
-    console.error('[intro] Liquid Chrome shader unavailable; switching to the no-WebGL fallback.');
+  const markUnavailable = useCallback((reason = 'Unknown Liquid Chrome initialization error.') => {
+    console.error('[intro] Liquid Chrome shader unavailable:', reason);
+    setShaderError(reason);
     setWebgl(false);
     setShaderReady(false);
     setShaderTransition(false);
-    // Lost mid-sequence: the DOM terminal is already gone, so reveal the page now.
-    if (stepRef.current === 'running' || stepRef.current === 'leaving') finish('done');
-  }, [finish]);
+    if (stepRef.current === 'running' || stepRef.current === 'leaving') {
+      loopRef.current?.dispose();
+      loopRef.current = null;
+      setHandedOff(false);
+      goTo('ready');
+      setIntroState('playing');
+    }
+  }, [goTo]);
 
   // Align the terminal to Buddy's final hero seat before the first paint.
   useLayoutEffect(() => {
@@ -156,6 +159,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       pendingRun.current = true;
       return;
     }
+    if (!webgl) return;
     pendingRun.current = false;
     soundEngine.unlock();
     buddyVoice.prime();
@@ -171,8 +175,13 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     const slot = document.querySelector<HTMLElement>(HERO_SLOT);
     const stage = stageRef.current;
     const useShader = webgl && shaderReady && stage !== null && windowEl !== null && slot !== null;
-    // Terminal visibility follows actual shader use, not generic WebGL support.
-    setShaderTransition(useShader);
+    if (!useShader) {
+      setShaderError('The morph stage or its measured terminal/hero geometry is missing. The terminal has been kept visible.');
+      goTo('ready');
+      setIntroState('playing');
+      return;
+    }
+    setShaderTransition(true);
 
     let from: Box | null = windowEl ? boxFromRect(windowEl.getBoundingClientRect()) : null;
     let to: Box | null = slot ? boxFromRect(slot.getBoundingClientRect()) : null;
@@ -183,7 +192,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     };
     window.addEventListener('resize', onResize);
 
-    const m = useShader ? marks : fallbackMarks;
+    const m = marks;
     // Hand-off target: the 3D Buddy (if it has loaded) or the static placeholder.
     const toThreeD = document.documentElement.dataset.buddy === '3d';
     const fired = new Set<string>();
@@ -195,6 +204,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     };
 
     const probe = introDebugEnabled ? createTimingProbe() : null;
+    let shaderFrameVisible = false;
 
     const loop = new FrameLoop((t) => {
       probe?.frame(t);
@@ -207,7 +217,6 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
         setIntroState('leaving');
       });
       once('handoff', t >= m.handoff[0], () => setIntroState('handoff'));
-      if (!useShader) once('speak', t >= m.handoff[0], () => buddyVoice.sayOnce(runId.current, spokenIntro));
 
       if (useShader && stage && from && to && stageRef.current === stage) {
         once('blip', t >= marks.face[0] + 120, () => soundEngine.play('blip'));
@@ -230,11 +239,15 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
         stage.set('u_alpha', u.alpha);
         try {
           stage.draw();
-        } catch {
-          // A failing GPU never leaves a blank screen: report it and reveal the page.
-          console.error('[intro] Liquid Chrome draw failed; ending the shader transition.');
+          if (!shaderFrameVisible && t >= marks.swapStart) {
+            shaderFrameVisible = true;
+            setHandedOff(true);
+          }
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          console.error('[intro] Liquid Chrome draw failed:', error);
           window.removeEventListener('resize', onResize);
-          finish('done');
+          markUnavailable(reason);
           return;
         }
       }
@@ -247,7 +260,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     });
     loopRef.current = loop;
     loop.start();
-  }, [reducedMotion, webgl, shaderReady, finish, goTo]);
+  }, [reducedMotion, webgl, shaderReady, finish, goTo, markUnavailable]);
 
   // Keep the latest run callback without capturing an obsolete state snapshot.
   runAction.current = run;
@@ -287,7 +300,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       tabIndex={-1}
     >
       <div className={styles.backdrop} aria-hidden="true" />
-      {webgl ? <LiquidScene stageRef={stageRef} onReady={markShaderReady} onUnavailable={markUnavailable} /> : null}
+      {webgl ? <LiquidScene stageRef={stageRef} active={shaderTransition} onReady={markShaderReady} onUnavailable={markUnavailable} /> : null}
       <TerminalScene
         typed={typed}
         outputLines={outputLines}
@@ -300,6 +313,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
         windowRef={windowRef}
         runRef={runRef}
       />
+      {shaderError ? <p className={styles.shaderError} role="status">Liquid Metal transition unavailable: {shaderError}</p> : null}
       <div className={styles.controls}>
         <IntroControls soundEnabled={soundEnabled} soundSupported={soundSupported} onSound={onSound} onSkip={skip} />
       </div>

@@ -90,6 +90,20 @@ export class ShaderStage {
     else gl.uniform4f(location, value[0], value[1], value[2], value[3]);
   }
 
+  /** Read one CSS-pixel sample from the last completed frame (origin top-left). */
+  readPixelCss(x: number, y: number): Uint8Array {
+    if (this.disposed) throw new Error('Cannot read a disposed shader stage');
+    if (this.canvas.width < 1 || this.canvas.height < 1) throw new Error('Shader canvas has no drawing buffer');
+    const pixel = new Uint8Array(4);
+    const px = Math.max(0, Math.min(this.canvas.width - 1, Math.round(x * this.dpr)));
+    const py = Math.max(0, Math.min(this.canvas.height - 1, this.canvas.height - 1 - Math.round(y * this.dpr)));
+    this.gl.finish();
+    this.gl.readPixels(px, py, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, pixel);
+    const error = this.gl.getError();
+    if (error !== this.gl.NO_ERROR) throw new Error('WebGL pixel readback failed (0x' + error.toString(16) + ')');
+    return pixel;
+  }
+
   /** Render one frame with the current uniforms. */
   draw(): void {
     if (this.disposed) return;

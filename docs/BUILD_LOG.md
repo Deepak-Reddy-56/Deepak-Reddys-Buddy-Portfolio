@@ -324,3 +324,23 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - The Paper skin is initially parked off-screen at `translate3d(-1200px, -1200px, 0)`. Its MutationObserver previously set opacity to 1 as soon as the shader canvas appeared, even when the director had not yet supplied a measured seat. It now stays hidden until a valid position and size exist; the first placement is applied before reveal.
 - `BuddyRenderer.place()` previously called `positionPaperSkin()` with a neutral pose every tick, immediately overriding the current bank/stretch/bob written by `update()`. It now reuses the last director pose so the Paper chrome body stays aligned with the Three.js face.
 - This closes the last staging-position/pose reset path involved in the persistent Buddy reveal after the morph.
+## 2026-11-13 — Fix the invisible Liquid Chrome render
+
+### Root cause found
+- The procedural chrome environment called `smoothstep(-0.15, -0.7, y)` in `studioBuddy()`. GLSL defines output as undefined when `edge0 >= edge1`. This helper is evaluated by `shadeChrome()` from the first morph frame, including when the studio blend weight is zero, allowing invalid values to propagate into the metallic output.
+- The previous warm-up compiled the shader and drew only with `u_alpha=0`; it never verified the GPU returned visible pixels.
+- The terminal was hidden at the timeline swap mark before verifying that the morph canvas had drawn its first visible frame.
+- A runtime draw exception called `finish('done')`, which removed the intro and revealed Buddy immediately.
+
+### Changes
+- Replaced the reversed floor gradient with `1.0 - smoothstep(-0.7, -0.15, y)`.
+- Added `ShaderStage.readPixelCss()` and a visible pixel readback in LiquidScene warm-up. Readiness now means the GPU has rendered a non-transparent, non-black metallic pixel.
+- Kept the morph canvas hidden during warm-up and made it visible only during the actual transition.
+- Removed the silent no-shader fallback that hid the terminal and revealed Buddy. If the shader fails, the terminal stays visible with the actual diagnostic reason.
+- The terminal only hands over after the first visible shader frame has drawn; runtime draw errors restore the terminal instead of completing the intro.
+
+### External reference
+- GLSL `smoothstep` requires `edge0 < edge1`; results are undefined otherwise: https://docs.gl/el3/smoothstep
+
+### Validation
+- Vercel production build and runtime pixel-readback check are required.

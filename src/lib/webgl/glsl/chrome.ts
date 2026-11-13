@@ -81,7 +81,7 @@ vec3 studioBuddy(vec3 r) {
   // 3D body's and there is no PMREM blur here, so the floor starts lower and edges are softer.
   float az = atan(r.z, r.x);
   float y = r.y + 0.10 * sin(az * 2.0 + 0.6);
-  vec3 floorC = mix(vec3(0.34, 0.345, 0.37), vec3(0.84, 0.84, 0.86), smoothstep(-0.15, -0.7, y));
+  vec3 floorC = mix(vec3(0.34, 0.345, 0.37), vec3(0.84, 0.84, 0.86), (1.0 - smoothstep(-0.7, -0.15, y)));
   vec3 c = mix(floorC, vec3(1.04, 1.04, 1.06), smoothstep(-0.30, 0.25, y));
   c *= 1.0 - 0.55 * exp(-pow((y + 0.02) / 0.09, 2.0));
   float w = y * 1.4 + 0.5 * sin(az * 2.0 + y * 3.0);
