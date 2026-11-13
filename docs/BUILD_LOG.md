@@ -229,3 +229,11 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - **Build:** deployment reached READY. The project build command is `tsc -b && vite build`; therefore TypeScript and production compilation completed successfully.
 - **Owner checks still pending:** real voice quality and speaking permissions on desktop Chrome / iOS Safari / Android Chrome; verify tap target, captions and joke frequency.
 - **Exact next task:** owner reviews M4.1 preview. Then implement M4.2 (voice selection UI + interaction polish), followed by M5 reference-layout parity. No merge to `main`.
+
+
+## 2026-11-13 — Restore reference liquid-chrome Buddy finish
+- Verified the original M2 terminal → liquid-chrome → Buddy shader transition is still present and unchanged in M4 relative to M3. The intro runs once per browser profile; `?intro` forces replay.
+- Replaced Buddy's rectangular studio softbox environment with a warped, high-contrast liquid reflection field: flowing silver/black ribbons and a restrained spectral band inspired by the supplied reference video.
+- Mirrored the same reflection field in the intro GLSL so the terminal's chrome transformation and the final 3D Buddy use the same material language.
+- No intro timing, terminal scene, narration, section interaction or flight code changed.
+- Build/preview verification pending.
