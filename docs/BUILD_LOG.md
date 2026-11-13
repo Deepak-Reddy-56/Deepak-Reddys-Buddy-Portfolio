@@ -260,3 +260,6 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Removed centre interpolation from the intro. The same shader object now stays at the terminal's exact centre from takeover through chrome deformation and face formation.
 - At Run, measure the terminal and align the reserved hero seat to that exact centre. Dispatch a resize so BuddyDirector re-measures the changed target. This makes the shader → persistent 3D handoff occur in place.
 - Physical-device review remains necessary; deployment success alone does not verify the animation.
+
+
+- Follow-up cleanup: the alignment resize listener is removed on every exit path (normal finish, skip, WebGL failure, or component unmount), avoiding a stale listener after the intro closes.

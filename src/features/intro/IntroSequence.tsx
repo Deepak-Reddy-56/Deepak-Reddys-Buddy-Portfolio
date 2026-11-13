@@ -57,6 +57,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
   const runRef = useRef<HTMLButtonElement>(null);
   const stageRef = useRef<ShaderStage | null>(null);
   const loopRef = useRef<FrameLoop | null>(null);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
   const stepRef = useRef<Step>('typing');
   const runId = useRef(`intro-${Math.random().toString(36).slice(2)}`);
   const finished = useRef(false);
@@ -70,6 +71,8 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     (reason: IntroEnd) => {
       if (finished.current) return;
       finished.current = true;
+      resizeCleanupRef.current?.();
+      resizeCleanupRef.current = null;
       if (reason === 'skip') buddyVoice.cancel();
       loopRef.current?.dispose();
       loopRef.current = null;
@@ -93,7 +96,10 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     return () => setIntroState(null);
   }, []);
 
-  useEffect(() => () => loopRef.current?.dispose(), []);
+  useEffect(() => () => {
+    resizeCleanupRef.current?.();
+    loopRef.current?.dispose();
+  }, []);
 
   // Scene A: the command types itself.
   useEffect(() => {
@@ -150,6 +156,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     };
     const onResize = () => alignHeroSeat();
     window.addEventListener('resize', onResize);
+    resizeCleanupRef.current = () => window.removeEventListener('resize', onResize);
     alignHeroSeat();
     // BuddyDirector measured the original seat at mount. Re-measure the aligned seat.
     window.dispatchEvent(new Event('resize'));
@@ -203,14 +210,12 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
           stage.draw();
         } catch {
           // A failing GPU never leaves a blank screen: go straight to the page.
-          window.removeEventListener('resize', onResize);
           finish('done');
           return;
         }
       }
 
       if (t >= m.done) {
-        window.removeEventListener('resize', onResize);
         probe?.report(t);
         finish('done');
       }

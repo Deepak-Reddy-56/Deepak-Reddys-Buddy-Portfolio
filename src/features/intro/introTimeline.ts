@@ -11,7 +11,7 @@ export const marks = {
   swapEnd: 780, // DOM terminal fully gone; the shader carries on
   chrome: [700, 1450],
   morph: [820, 1920], // reshape and resize the terminal into a chrome pebble at its own centre
-  face: [1930, 2450], // the face forms before the already-transformed Buddy travels
+  face: [1930, 2450], // the face forms on the transformed terminal while it remains in place
   drops: [900, 2150],
   revealPage: [2350, 3150], // reveal the page as the formed Buddy makes its short flight
   blink: [2600, 2760],
