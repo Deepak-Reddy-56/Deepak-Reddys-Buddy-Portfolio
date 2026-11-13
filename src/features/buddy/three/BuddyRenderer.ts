@@ -25,6 +25,7 @@ export class BuddyRenderer {
   private readonly paperSkinObserver: MutationObserver | null;
   private paperSkinActive = false;
   private paperPosition = { x: 0, y: 0, size: 0 };
+  private lastPose: BuddyPose = { bank: 0, pitch: 0, yaw: 0, stretch: 1, bob: 0, flying: 0 };
   private width = 0;
   private height = 0;
   /** Buddy's on-screen box (CSS px) this frame and last frame — the only area drawn. */
@@ -73,13 +74,15 @@ export class BuddyRenderer {
     this.model.root.scale.setScalar(size / 2);
     this.paperPosition = { x, y, size };
     this.syncPaperSkin();
-    this.positionPaperSkin({ bank: 0, pitch: 0, yaw: 0, stretch: 1, bob: 0, flying: 0 });
+    this.positionPaperSkin(this.lastPose);
+    if (this.paperSkinActive && size > 0 && this.paperSkin) this.paperSkin.style.opacity = '1';
     // Generous bounds: tilt, stretch and the contact shadow stay inside.
     const half = size * 0.82;
     this.box = { x: x - half, y: y - half * 0.95, w: half * 2, h: half * 2.15 };
   }
 
   update(dt: number, pose: BuddyPose, talk: number): boolean {
+    this.lastPose = pose;
     const moving = this.model.update(dt, pose, talk);
     this.positionPaperSkin(pose);
     return moving;
@@ -93,7 +96,14 @@ export class BuddyRenderer {
       this.paperSkinActive = ready;
       this.model.setPaperSkinActive(ready);
     }
-    this.paperSkin.style.opacity = ready ? '1' : '0';
+    // Never reveal the Paper canvas at its off-screen staging transform.
+    // It becomes visible only after the director has measured its first seat.
+    if (ready && this.paperPosition.size > 0) {
+      this.positionPaperSkin(this.lastPose);
+      this.paperSkin.style.opacity = '1';
+    } else {
+      this.paperSkin.style.opacity = '0';
+    }
   }
 
   /** Keep the 2D shader skin aligned with the director's exact CSS-pixel seat. */

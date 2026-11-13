@@ -319,3 +319,8 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 
 ### Validation
 - Vercel production build and deployment required. Browser-level visual verification remains necessary to validate the final crossfade on the user's device.
+## 2026-11-13 — Prevent Paper Buddy skin from revealing at its staging coordinates
+
+- The Paper skin is initially parked off-screen at `translate3d(-1200px, -1200px, 0)`. Its MutationObserver previously set opacity to 1 as soon as the shader canvas appeared, even when the director had not yet supplied a measured seat. It now stays hidden until a valid position and size exist; the first placement is applied before reveal.
+- `BuddyRenderer.place()` previously called `positionPaperSkin()` with a neutral pose every tick, immediately overriding the current bank/stretch/bob written by `update()`. It now reuses the last director pose so the Paper chrome body stays aligned with the Three.js face.
+- This closes the last staging-position/pose reset path involved in the persistent Buddy reveal after the morph.
