@@ -244,3 +244,11 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Restored `src/features/buddy/three/studioEnvironment.ts` and `src/lib/webgl/glsl/chrome.ts` byte-for-byte from the approved `m3-buddy-character` branch, preserving Claude's prior M3 material implementation.
 - M4.1 narration and Buddy interactions remain in place. The M2 intro timeline, terminal scene, morph shader and sound engine were not changed by this revert.
 - Do not attempt further global environment/shader redesign as a shortcut. The next transition work must address shape continuity, deformation and shader-to-3D handoff directly, then be reviewed against the reference clip before merging.
+
+
+## 2026-11-13 — M4 transition sequencing: terminal becomes Buddy in place
+- Owner clarified that Buddy must not appear to originate from below; the terminal itself must visibly become Buddy.
+- Root cause: the intro timeline coupled centre travel and size reduction to the early rectangle-to-pebble morph. The shader object was already travelling toward the hero seat while it was still changing shape.
+- Separated the timeline into two phases: (1) morph and resize at the exact terminal centre; (2) after the face forms, move that same chrome object to the hero seat for the existing 3D handoff.
+- No second Buddy is introduced. DOM terminal → shader morph → chrome Buddy → 3D Buddy remains the intended continuous visual chain.
+- Build and preview verification pending; owner review is required before calling the transition fixed.

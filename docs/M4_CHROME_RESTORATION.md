@@ -18,3 +18,7 @@
 
 ## Review outcome — 2026-11-13
 The first M4 chrome environment experiment was rejected by the owner because the resulting transition was worse than Claude's prior M3 implementation. The two shared material files were restored exactly from `m3-buddy-character`. Keep the original M2 transition and prior M3 material as the baseline for the next dedicated transition pass.
+
+
+## Transition sequencing correction — 2026-11-13
+The terminal is the source object, not a prompt before a separate Buddy entrance. The shader now holds the exact terminal centre while changing its dimensions and geometry into the chrome pebble and revealing its face. Only after the Buddy form is visible does that same object move to the reserved hero seat. The final shader-to-3D handoff remains at hero-seat coordinates.
