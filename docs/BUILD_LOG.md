@@ -287,3 +287,19 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 ### Validation
 - Run a clean Vercel typecheck/build and verify the intro shader hand-off in a browser at desktop and mobile widths.
 - Confirm the first frame of the persistent Buddy matches the morph's final hero-seat centre and silhouette.
+## 2026-11-13 — Intro shader readiness and hand-off audit
+
+### Root cause fixed
+- The previous code selected its terminal-hide CSS from the generic `webgl` capability flag (`handedOff && webgl`) rather than the actual `useShader` result. If the WebGL context existed but the Liquid Chrome stage had not initialised (or the hero slot/stage was missing), the fallback timeline could hide the terminal without a shader being drawn.
+- There was no readiness handshake: Enter was accepted before `LiquidScene` had necessarily compiled and warmed the exact fragment shader.
+- A separate `supportsWebGL()` probe created an additional WebGL context even though the actual stage constructor already performs the definitive test.
+
+### Changes
+- Removed the redundant WebGL probe. The actual `ShaderStage` constructor is now the source of truth for availability.
+- `LiquidScene` reports ready only after shader construction and a successful warm-up draw; compile/warm-up failures are logged and switch to the fallback path.
+- If Enter is pressed before the shader is ready, the user's action is queued and replayed after the stage becomes ready. If initialisation fails, it replays through the explicit fallback instead.
+- The terminal now hides only when `shaderTransition` is true; when the actual shader is not active, the dedicated fallback exit is used, so no blank transition is possible.
+- Explicit stacking order puts the intro shader canvas above the terminal while keeping its initial alpha at zero.
+
+### Validation still required
+- Vercel typecheck/production build and a real browser check of the WebGL context, compile status and terminal-to-Buddy hand-off.

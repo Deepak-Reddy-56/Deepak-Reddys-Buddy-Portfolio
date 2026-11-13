@@ -5,6 +5,7 @@ import styles from './LiquidScene.module.css';
 
 type LiquidSceneProps = {
   stageRef: RefObject<ShaderStage | null>;
+  onReady: () => void;
   onUnavailable: () => void;
 };
 
@@ -13,7 +14,7 @@ type LiquidSceneProps = {
  * settles into Buddy. The stage is created, compiled and warmed on mount; it
  * then draws only when the orchestrator's clock asks it to.
  */
-export function LiquidScene({ stageRef, onUnavailable }: LiquidSceneProps) {
+export function LiquidScene({ stageRef, onReady, onUnavailable }: LiquidSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -23,7 +24,8 @@ export function LiquidScene({ stageRef, onUnavailable }: LiquidSceneProps) {
     try {
       stage = new ShaderStage(canvas, liquidChromeFragment, { onContextLost: onUnavailable });
       stageRef.current = stage;
-    } catch {
+    } catch (error) {
+      console.error('[intro] Liquid Chrome shader failed to compile or initialize:', error);
       onUnavailable();
     }
     // Warm-up: drivers finish building the GPU pipeline on the first draw. Do one
@@ -34,7 +36,9 @@ export function LiquidScene({ stageRef, onUnavailable }: LiquidSceneProps) {
         stage.set('u_alpha', 0);
         stage.set('u_half', [1, 1]);
         stage.draw();
-      } catch {
+        onReady();
+      } catch (error) {
+        console.error('[intro] Liquid Chrome shader warm-up failed:', error);
         onUnavailable();
       }
     }, 120);
@@ -43,7 +47,7 @@ export function LiquidScene({ stageRef, onUnavailable }: LiquidSceneProps) {
       stage?.dispose();
       stageRef.current = null;
     };
-  }, [stageRef, onUnavailable]);
+  }, [stageRef, onReady, onUnavailable]);
 
   // Always composited (transparent until the shader's own alpha rises at the swap):
   // first-time canvas compositing is expensive, so it happens while the terminal types.

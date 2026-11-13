@@ -5,7 +5,7 @@ import { soundEngine } from '../../lib/audio/soundEngine';
 import { buddyVoice } from '../../lib/voice/voice';
 import { spokenIntro } from '../../content/dialogue';
 import { FrameLoop } from '../../lib/frameLoop';
-import { supportsWebGL, type ShaderStage } from '../../lib/webgl/ShaderStage';
+import type { ShaderStage } from '../../lib/webgl/ShaderStage';
 import { createTimingProbe, introDebugEnabled } from './introDebug';
 import { IntroControls } from './IntroControls';
 import { boxFromRect, introUniforms, marks, type Box } from './introTimeline';
@@ -64,7 +64,10 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
   const [typed, setTyped] = useState(0);
   const [outputLines, setOutputLines] = useState(0);
   const [handedOff, setHandedOff] = useState(false);
-  const [webgl, setWebgl] = useState(supportsWebGL);
+  // Let the actual fragment shader prove it compiled and warmed successfully.
+  const [webgl, setWebgl] = useState(true);
+  const [shaderReady, setShaderReady] = useState(false);
+  const [shaderTransition, setShaderTransition] = useState(false);
   const [touch] = useState(() => window.matchMedia('(hover: none)').matches);
 
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -75,6 +78,8 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
   const stepRef = useRef<Step>('typing');
   const runId = useRef(`intro-${Math.random().toString(36).slice(2)}`);
   const finished = useRef(false);
+  const pendingRun = useRef(false);
+  const runAction = useRef<() => void>(() => {});
 
   const goTo = useCallback((next: Step) => {
     stepRef.current = next;
@@ -95,8 +100,12 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
   );
 
   const skip = useCallback(() => finish('skip'), [finish]);
+  const markShaderReady = useCallback(() => setShaderReady(true), []);
   const markUnavailable = useCallback(() => {
+    console.error('[intro] Liquid Chrome shader unavailable; switching to the no-WebGL fallback.');
     setWebgl(false);
+    setShaderReady(false);
+    setShaderTransition(false);
     // Lost mid-sequence: the DOM terminal is already gone, so reveal the page now.
     if (stepRef.current === 'running' || stepRef.current === 'leaving') finish('done');
   }, [finish]);
@@ -140,6 +149,14 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
   const run = useCallback(() => {
     const current = stepRef.current;
     if (current !== 'typing' && current !== 'ready') return;
+
+    // Do not start the fallback timeline while the real shader is compiling.
+    // Queue the visitor's Enter/click and replay it after the ready/failure result.
+    if (!reducedMotion && webgl && (!shaderReady || stageRef.current === null)) {
+      pendingRun.current = true;
+      return;
+    }
+    pendingRun.current = false;
     soundEngine.unlock();
     buddyVoice.prime();
     soundEngine.play('enter');
@@ -155,7 +172,9 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     alignTerminalToHeroSlot(windowEl);
     const slot = document.querySelector<HTMLElement>(HERO_SLOT);
     const stage = stageRef.current;
-    const useShader = webgl && stage !== null && windowEl !== null && slot !== null;
+    const useShader = webgl && shaderReady && stage !== null && windowEl !== null && slot !== null;
+    // Terminal visibility follows actual shader use, not generic WebGL support.
+    setShaderTransition(useShader);
 
     let from: Box | null = windowEl ? boxFromRect(windowEl.getBoundingClientRect()) : null;
     let to: Box | null = slot ? boxFromRect(slot.getBoundingClientRect()) : null;
@@ -214,7 +233,8 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
         try {
           stage.draw();
         } catch {
-          // A failing GPU never leaves a blank screen: go straight to the page.
+          // A failing GPU never leaves a blank screen: report it and reveal the page.
+          console.error('[intro] Liquid Chrome draw failed; ending the shader transition.');
           window.removeEventListener('resize', onResize);
           finish('done');
           return;
@@ -229,7 +249,16 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     });
     loopRef.current = loop;
     loop.start();
-  }, [reducedMotion, webgl, finish, goTo]);
+  }, [reducedMotion, webgl, shaderReady, finish, goTo]);
+
+  // Keep the latest run callback without capturing an obsolete state snapshot.
+  runAction.current = run;
+  useEffect(() => {
+    if (!pendingRun.current) return;
+    if (webgl && (!shaderReady || stageRef.current === null)) return;
+    pendingRun.current = false;
+    runAction.current();
+  }, [webgl, shaderReady]);
 
   // Enter runs from anywhere (buttons keep their own Enter behaviour).
   useEffect(() => {
@@ -260,14 +289,14 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       tabIndex={-1}
     >
       <div className={styles.backdrop} aria-hidden="true" />
-      {webgl ? <LiquidScene stageRef={stageRef} onUnavailable={markUnavailable} /> : null}
+      {webgl ? <LiquidScene stageRef={stageRef} onReady={markShaderReady} onUnavailable={markUnavailable} /> : null}
       <TerminalScene
         typed={typed}
         outputLines={outputLines}
         ready={step === 'ready'}
         running={running}
-        handedOff={handedOff && webgl}
-        fallbackExit={handedOff && !webgl}
+        handedOff={handedOff && shaderTransition}
+        fallbackExit={handedOff && !shaderTransition}
         touch={touch}
         onRun={run}
         windowRef={windowRef}
