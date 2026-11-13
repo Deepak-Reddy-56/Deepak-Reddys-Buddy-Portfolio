@@ -148,6 +148,9 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     // This prevents a second, lower Buddy from appearing after the shader morph.
     const alignHeroSeat = () => {
       if (!windowEl || !slot || !heroSeat) return;
+      // Remove the previous viewport-specific translation before measuring the base seat.
+      heroSeat.style.removeProperty('--buddy-intro-offset-x');
+      heroSeat.style.removeProperty('--buddy-intro-offset-y');
       from = boxFromRect(windowEl.getBoundingClientRect());
       const before = slot.getBoundingClientRect();
       heroSeat.style.setProperty('--buddy-intro-offset-x', `${from.cx - (before.left + before.width / 2)}px`);
