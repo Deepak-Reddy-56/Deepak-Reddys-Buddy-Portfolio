@@ -218,3 +218,14 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Added a live caption for tap reactions and a keyboard-accessible reaction control.
 - M4.1 is intentionally scoped to character interaction and narration; carousel, case studies, playground and reference-layout redesign are not part of this slice.
 - Next: verify the branch build/preview, listen on real devices, then plan M4.2 (voice selection UI and interaction polish) and M5 (reference-layout parity).
+
+
+## Checkpoint — 2026-11-13 (M4.1 preview build)
+- **Branch / feature commit:** `m4-buddy-interactivity` @ `8253cf9` (pushed from the latest M3 checkpoint `44d0289`). This contains the M4.1 interaction and narration slice.
+- **Vercel:** connected preview deployment reports **READY** for `8253cf94a2053829af4a37238efa5335c00e6cee`.
+  - Preview: https://deepak-reddys-buddy-portfolio-3arygacs6-deepak-2630s-projects.vercel.app/
+  - Inspect: https://vercel.com/deepak-2630s-projects/deepak-reddys-buddy-portfolio/22N6nqPgsxNq2gWaCJm4V9qPmrCw
+  - The preview uses the project's existing Deployment Protection and may require Vercel sign-in.
+- **Build:** deployment reached READY. The project build command is `tsc -b && vite build`; therefore TypeScript and production compilation completed successfully.
+- **Owner checks still pending:** real voice quality and speaking permissions on desktop Chrome / iOS Safari / Android Chrome; verify tap target, captions and joke frequency.
+- **Exact next task:** owner reviews M4.1 preview. Then implement M4.2 (voice selection UI + interaction polish), followed by M5 reference-layout parity. No merge to `main`.

@@ -1,6 +1,6 @@
 # M4 — Buddy interactivity and narration
 
-Status: **M4.1 implemented on `m4-buddy-interactivity`; awaiting build and preview verification.**
+Status: **M4.1 pushed; Vercel preview build READY. Owner device and voice review pending.**
 
 ## M4.1 — Interaction and narration foundation
 - [x] One data-driven narration catalog in `src/content/buddyScripts.ts`.
@@ -15,7 +15,7 @@ Status: **M4.1 implemented on `m4-buddy-interactivity`; awaiting build and previ
 - [x] One 3D model and one existing rendering context are retained.
 
 ## Owner checks
-- [ ] Vercel preview passes TypeScript and production build.
+- [x] Vercel preview reports READY; the connected build command runs `tsc -b && vite build`.
 - [ ] Spoken lines sound natural in desktop Chrome.
 - [ ] Available system voices tested on iOS Safari / Android Chrome.
 - [ ] Section narration timing and joke frequency approved.

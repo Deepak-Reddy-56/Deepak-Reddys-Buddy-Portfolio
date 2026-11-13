@@ -114,7 +114,7 @@ class SpeechSynthesisVoiceProvider implements VoiceProvider {
         utterance.volume = 0.92;
 
         let settled = false;
-        const expectedMs = Math.max(9000, text.trim().split(/\\s+/).length * 620 + 4500);
+        const expectedMs = Math.max(9000, text.trim().split(/\s+/).length * 620 + 4500);
         const done = () => {
           if (settled) return;
           settled = true;
