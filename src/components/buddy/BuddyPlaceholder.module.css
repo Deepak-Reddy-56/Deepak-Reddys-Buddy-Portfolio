@@ -25,7 +25,6 @@
     inset -0.35em -0.45em 0.9em rgba(64, 66, 78, 0.28),
     inset 0.25em 0.3em 0.6em rgba(255, 255, 255, 0.9),
     0 0.9em 1.4em -0.7em rgba(30, 32, 40, 0.28);
-  animation: float 6s var(--ease-in-out) infinite;
   transform-origin: 50% 90%;
 }
 
@@ -97,19 +96,8 @@
   border-radius: 0 0 0.6em 0.6em;
 }
 
-/* Starts and ends at rest so the intro hand-off never jumps. */
-@keyframes float {
-  0%,
-  100% {
-    transform: none;
-  }
-  30% {
-    transform: translateY(-3%) rotate(-1.5deg);
-  }
-  70% {
-    transform: translateY(-2%) rotate(1.5deg);
-  }
-}
+/* No independent vertical float: Buddy's movement has one owner. */
+
 
 :global(html[data-intro]) [data-buddy-seat='hero'] .body,
 :global(html[data-intro]) [data-buddy-seat='hero'] .eye {

@@ -265,9 +265,11 @@ export class BuddyDirector {
       // No clear corridor: shrink away at this seat, pop in at the next (never crosses content).
       const out = 1 - smoothstep(0, 0.5, u);
       const inn = smoothstep(0.5, 1, u);
+      // Last-resort hand-off is a stationary dissolve at each seat.
+      // No vertical nudge or upward pop is added to the arriving Buddy.
       return u < 0.5
-        ? { x: a.x, y: a.y - 12 * (1 - out), size: Math.max(0.001, a.size * out), u, hop: true }
-        : { x: b.x, y: b.y - 12 * (1 - inn), size: Math.max(0.001, b.size * inn), u, hop: true };
+        ? { x: a.x, y: a.y, size: Math.max(0.001, a.size * out), u, hop: true }
+        : { x: b.x, y: b.y, size: Math.max(0.001, b.size * inn), u, hop: true };
     }
     const p = pointOnLeg(leg, easeSine(u));
     // Shrink early / grow late, so a big hero Buddy only exists near the hero.

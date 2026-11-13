@@ -3,7 +3,7 @@
   left: 50%;
   top: 47%;
   width: min(520px, calc(100vw - 40px));
-  transform: translate(-50%, -50%);
+  transform: translate(calc(-50% + var(--terminal-align-x, 0px)), calc(-50% + var(--terminal-align-y, 0px)));
 }
 
 /* Paper Liquid Metal is the terminal surface, not a decorative page overlay. */

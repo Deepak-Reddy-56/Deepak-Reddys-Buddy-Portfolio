@@ -22,9 +22,9 @@ uniform vec2 u_half;         // css px (half width, half height)
 uniform float u_radius;      // corner radius of the box state
 uniform float u_morph;       // 0 box → 1 ellipse/pebble
 uniform float u_liquid;      // surface agitation 0..1
-uniform float u_drops;       // satellite droplets 0..1
 uniform float u_chrome;      // 0 dark glass → 1 chrome
-uniform float u_face;        // eyes/mouth 0..1 (scale, may overshoot)
+uniform float u_face;        // eyes form 0..1
+uniform float u_smile;       // smile forms after the eyes 0..1
 uniform float u_blink;       // 0 open → 1 closed
 uniform float u_settle;      // liquid chrome → exact placeholder look (hand-off)
 uniform float u_talk;        // 0..1 mouth opening while Buddy speaks
@@ -37,20 +37,11 @@ ${glslBuddyCard}
 
 float shape(vec2 q) {
   float minHalf = min(u_half.x, u_half.y);
+  // One continuous volume: a rounded terminal profile becomes a solid pebble.
   float d = mix(sdRoundBox(q, u_half, u_radius), sdEllipse(q, u_half), u_morph);
 
-  if (u_drops > 0.001) {
-    for (int i = 0; i < 3; i++) {
-      float fi = float(i);
-      float a = u_time * (0.9 + fi * 0.35) + fi * 2.094;
-      float reach = minHalf * (0.55 + 0.6 * u_drops);
-      vec2 pos = vec2(cos(a), sin(a) * 0.82) * reach;
-      float r = minHalf * (0.16 + 0.05 * sin(u_time * 2.1 + fi)) * u_drops;
-      d = smin(d, length(q - pos) - r, 18.0 + 30.0 * u_drops);
-    }
-  }
-
-  d += u_liquid * (fbm2(q * 0.009 + vec2(u_time * 0.5, -u_time * 0.35)) - 0.5) * 0.2 * minHalf;
+  // Surface tension creates a few pixels of living metal, never detached drops.
+  d += u_liquid * (fbm2(q * 0.009 + vec2(u_time * 0.5, -u_time * 0.35)) - 0.5) * 0.04 * minHalf;
   // Settle into the placeholder's exact silhouette.
   if (u_settle > 0.0) d = mix(d, sdBuddyShape(q + u_half, 2.0 * u_half), u_settle);
   return d;
@@ -62,7 +53,7 @@ void main() {
   float minHalf = min(u_half.x, u_half.y);
 
   // Early out: most of the viewport is empty. Bounds cover droplets and shadow.
-  vec2 reach = u_half + minHalf * 1.25 * u_drops + 48.0;
+  vec2 reach = u_half + 48.0;
   if (abs(q.x) > reach.x || q.y < -reach.y || q.y > reach.y + u_half.y * 0.7 + 40.0) {
     gl_FragColor = vec4(0.0);
     return;
@@ -89,7 +80,7 @@ void main() {
     float x = clamp(-d / bevel, 0.0, 1.0);
     float slope = (1.0 - x) / sqrt(max(1.0 - (1.0 - x) * (1.0 - x), 0.004));
     vec2 tilt = grad * slope;
-    tilt += u_liquid * 0.3 * (vec2(fbm2(q * 0.008 + u_time * 0.6), fbm2(q * 0.008 - u_time * 0.5 + 9.0)) - 0.5);
+    tilt += u_liquid * 0.16 * (vec2(fbm2(q * 0.008 + u_time * 0.6), fbm2(q * 0.008 - u_time * 0.5 + 9.0)) - 0.5);
     vec3 N = normalize(vec3(tilt.x, -tilt.y, 1.0));
 
     vec3 chrome = shadeChrome(N, u_time, 1.0 - 0.6 * u_face, q.x * 0.0015 + u_time * 0.04, u_face);
@@ -124,14 +115,16 @@ void main() {
       color = mix(eyeColor, color, eyes);
       color = mix(color, vec3(1.0), shine * (1.0 - eyes) * step(0.3, open));
 
-      // Mouth: 0.9em x 0.42em box, 0.13em border, no top border, rounded bottom → a U.
-      vec2 m = (uv - vec2(0.014, 0.0424)) / max(u_face, 1e-3);
-      float outer = sdEllipse(m, vec2(0.045, 0.042));
-      float inner = sdEllipse(m, vec2(0.032, 0.029));
-      float mouth = (1.0 - smoothstep(-faa, faa, outer)) * smoothstep(-faa, faa, inner) * step(0.0, m.y);
-      float openMouth = 1.0 - smoothstep(-faa, faa, sdEllipse(m - vec2(0.0, 0.022), vec2(0.036, 0.004 + 0.024 * u_talk)));
-      mouth = max(mouth, openMouth * step(0.02, u_talk));
-      color = mix(color, hex(13.0, 13.0, 15.0), mouth * clamp(u_face, 0.0, 1.0));
+      // The smile starts after the eyes; it grows into place without overshoot.
+      if (u_smile > 0.001) {
+        vec2 m = (uv - vec2(0.014, 0.0424)) / max(u_smile, 1e-3);
+        float outer = sdEllipse(m, vec2(0.045, 0.042));
+        float inner = sdEllipse(m, vec2(0.032, 0.029));
+        float mouth = (1.0 - smoothstep(-faa, faa, outer)) * smoothstep(-faa, faa, inner) * step(0.0, m.y);
+        float openMouth = 1.0 - smoothstep(-faa, faa, sdEllipse(m - vec2(0.0, 0.022), vec2(0.036, 0.004 + 0.024 * u_talk)));
+        mouth = max(mouth, openMouth * step(0.02, u_talk));
+        color = mix(color, hex(13.0, 13.0, 15.0), mouth * clamp(u_smile, 0.0, 1.0));
+      }
     }
   }
 

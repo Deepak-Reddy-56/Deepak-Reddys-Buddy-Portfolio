@@ -267,3 +267,23 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Changed Buddy's `colorBack` to `#AAAAAC00` so the Liquid Metal mask is transparent outside Buddy's SVG silhouette.
 - Changed the terminal's full-canvas `shape="none"` scale from `0.72` to `1`, matching Paper's published full-screen preset and removing the inset material viewport inside the outer terminal window.
 - Set the Buddy material scale to `1` so its stripes/pattern fill the masked body rather than appearing unnecessarily zoomed out.
+## 2026-11-13 — Terminal-to-Buddy morph: stay in place, form the face
+
+### Cause found
+- The intro timeline interpolated the object's centre from the terminal window to the hero Buddy seat between 1000 and 2350 ms. This created vertical travel while the body morphed, so Buddy appeared to move rather than be the terminal itself.
+- The body size and face used `easeOutBack`, which adds overshoot. This made the liquid body and face features pop/spring instead of settling like one solid gallium drop.
+- The shader unioned three satellite droplets into the body silhouette, which weakened the sense of one cohesive metallic volume.
+- The CSS placeholder had an independent `float` keyframe that translated it vertically; this is removed so Buddy has one motion owner.
+- The last-resort section-flight hop also contained a vertical offset. It now dissolves at fixed seat coordinates without a vertical nudge.
+
+### Changes
+- Align the terminal window over the hero Buddy seat before the first paint and keep that alignment on resize. The morph starts at the final Buddy centre.
+- Remove centre interpolation: the rectangle changes into a pebble in place. The terminal window remains the anchor through the morph and hand-off.
+- Replace overshooting easing with non-overshooting cubic easing for body size and eyes. The mouth has its own later `u_smile` uniform so the eyes form first and the smile follows.
+- Remove detached satellite droplets and reduce surface displacement to subtle surface tension, keeping one solid, slowly settling liquid-metal body.
+- Remove the placeholder's independent float and the hop's vertical pop. Existing menu/section flight remains director-controlled.
+- Update the morph radius to match the 22px terminal corner radius.
+
+### Validation
+- Run a clean Vercel typecheck/build and verify the intro shader hand-off in a browser at desktop and mobile widths.
+- Confirm the first frame of the persistent Buddy matches the morph's final hero-seat centre and silhouette.

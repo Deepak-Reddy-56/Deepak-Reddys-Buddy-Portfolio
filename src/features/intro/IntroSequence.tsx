@@ -27,9 +27,24 @@ type IntroSequenceProps = {
 // Page and Buddy emerge behind the terminal *before* it recedes, so no frame is ever empty.
 const fallbackMarks = { outputEnd: 620, swapStart: 780, revealPage: [480, 1180], handoff: [480, 740], done: 1400 } as const;
 
-const TERMINAL_RADIUS = 16;
+const TERMINAL_RADIUS = 22;
 const HERO_SLOT = '[data-buddy-seat="hero"] [data-buddy-slot]';
 
+function alignTerminalToHeroSlot(windowEl: HTMLDivElement | null): void {
+  const slot = document.querySelector<HTMLElement>(HERO_SLOT);
+  const scene = windowEl?.parentElement;
+  if (!windowEl || !slot || !scene) return;
+  scene.style.setProperty('--terminal-align-x', '0px');
+  scene.style.setProperty('--terminal-align-y', '0px');
+  const terminal = windowEl.getBoundingClientRect();
+  const hero = slot.getBoundingClientRect();
+  const terminalX = terminal.left + terminal.width / 2;
+  const terminalY = terminal.top + terminal.height / 2;
+  const heroX = hero.left + hero.width / 2;
+  const heroY = hero.top + hero.height / 2;
+  scene.style.setProperty('--terminal-align-x', (heroX - terminalX) + 'px');
+  scene.style.setProperty('--terminal-align-y', (heroY - terminalY) + 'px');
+}
 function setIntroState(value: 'playing' | 'leaving' | 'handoff' | null): void {
   const root = document.documentElement;
   if (value) root.dataset.intro = value;
@@ -86,11 +101,18 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     if (stepRef.current === 'running' || stepRef.current === 'leaving') finish('done');
   }, [finish]);
 
-  // Page state for the homepage's CSS (hidden until the reveal). Before paint.
+  // Align the terminal to Buddy's final hero seat before the first paint.
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
     setIntroState('playing');
-    return () => setIntroState(null);
+    const align = () => alignTerminalToHeroSlot(windowRef.current);
+    align();
+    window.addEventListener('resize', align, { passive: true });
+    void document.fonts?.ready.then(align);
+    return () => {
+      window.removeEventListener('resize', align);
+      setIntroState(null);
+    };
   }, []);
 
   useEffect(() => () => loopRef.current?.dispose(), []);
@@ -130,13 +152,16 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     goTo('running');
 
     const windowEl = windowRef.current;
+    alignTerminalToHeroSlot(windowEl);
     const slot = document.querySelector<HTMLElement>(HERO_SLOT);
     const stage = stageRef.current;
     const useShader = webgl && stage !== null && windowEl !== null && slot !== null;
 
-    const from: Box | null = windowEl ? boxFromRect(windowEl.getBoundingClientRect()) : null;
+    let from: Box | null = windowEl ? boxFromRect(windowEl.getBoundingClientRect()) : null;
     let to: Box | null = slot ? boxFromRect(slot.getBoundingClientRect()) : null;
     const onResize = () => {
+      alignTerminalToHeroSlot(windowEl);
+      if (windowEl) from = boxFromRect(windowEl.getBoundingClientRect());
       if (slot) to = boxFromRect(slot.getBoundingClientRect());
     };
     window.addEventListener('resize', onResize);
@@ -179,9 +204,9 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
         stage.set('u_radius', u.radius);
         stage.set('u_morph', u.morph);
         stage.set('u_liquid', u.liquid);
-        stage.set('u_drops', u.drops);
         stage.set('u_chrome', u.chrome);
         stage.set('u_face', u.face);
+        stage.set('u_smile', u.smile);
         stage.set('u_blink', u.blink);
         stage.set('u_settle', u.settle);
         stage.set('u_talk', buddyVoice.talk(performance.now()));

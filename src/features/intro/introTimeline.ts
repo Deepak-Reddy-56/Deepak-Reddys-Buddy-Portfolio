@@ -1,23 +1,23 @@
-import { dampedWobble, easeInOutCubic, easeOutBack, easeOutCubic, lerp, progress } from '../../lib/easing';
+import { dampedWobble, easeInOutCubic, easeOutCubic, lerp, progress } from '../../lib/easing';
 
 /**
- * The single clock for the introduction, in ms after the visitor runs the
- * command. DOM moments (text out, overlay fade, hand-off) and shader uniforms
- * both read these marks, so nothing drifts out of sync.
+ * One continuous, in-place transformation:
+ * terminal rectangle -> cohesive liquid-metal pebble -> Buddy.
+ * The terminal is aligned to the hero seat before the first frame, so the
+ * centre never translates and Buddy is already where he will remain.
  */
 export const marks = {
-  outputEnd: 620, // terminal prints its two output lines
-  swapStart: 560, // shader box appears under the DOM terminal
-  swapEnd: 780, // DOM terminal fully gone; the shader carries on
-  chrome: [700, 1450],
-  morph: [820, 1800],
-  move: [1000, 2350],
-  drops: [900, 2150],
-  face: [2250, 2700],
-  revealPage: [2350, 3050], // white overlay fades, homepage emerges around Buddy
-  blink: [3050, 3210],
-  handoff: [3260, 3520], // shader → DOM placeholder crossfade
-  done: 3560,
+  outputEnd: 620,
+  swapStart: 560,
+  swapEnd: 780,
+  chrome: [680, 1420],
+  morph: [760, 1940],
+  face: [1990, 2370],
+  smile: [2290, 2630],
+  revealPage: [2670, 3300],
+  blink: [3160, 3320],
+  handoff: [3400, 3680],
+  done: 3740,
 } as const;
 
 export type Box = { cx: number; cy: number; hw: number; hh: number };
@@ -28,9 +28,9 @@ export type IntroUniforms = {
   radius: number;
   morph: number;
   liquid: number;
-  drops: number;
   chrome: number;
   face: number;
+  smile: number;
   blink: number;
   settle: number;
   alpha: number;
@@ -40,47 +40,26 @@ export function boxFromRect(rect: DOMRect): Box {
   return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, hw: rect.width / 2, hh: rect.height / 2 };
 }
 
-/**
- * `settleToCard`: end as an exact image of the CSS placeholder (static fallback).
- * When the 3D Buddy takes over instead, stay liquid chrome on his ellipsoid silhouette.
+/** Body changes shape and dimensions in place. Eyes form after the body,
+ * then the smile follows; neither uses overshooting easing.
  */
 export function introUniforms(t: number, from: Box, to: Box, radius: number, settleToCard = true): IntroUniforms {
-  const move = easeInOutCubic(progress(t, ...marks.move));
-  const size = easeOutBack(progress(t, ...marks.move), 0.9);
   const morph = easeInOutCubic(progress(t, ...marks.morph));
   const chrome = easeOutCubic(progress(t, ...marks.chrome));
-
-  // Agitation rises as the glass turns to metal, then settles with a wobble.
   const rise = easeOutCubic(progress(t, 700, 1150));
   const calm = progress(t, 1150, 2700);
-  const liquid = rise * Math.max(0, 1 - calm) * (0.75 + 0.25 * dampedWobble(calm));
-
-  const dropsP = progress(t, ...marks.drops);
-  const drops = Math.sin(Math.PI * dropsP) ** 1.5;
-
-  const face = easeOutBack(progress(t, ...marks.face), 1.6);
+  const liquid = rise * Math.max(0, 1 - calm) * (0.72 + 0.18 * dampedWobble(calm));
+  const face = easeOutCubic(progress(t, ...marks.face));
+  const smile = easeOutCubic(progress(t, ...marks.smile));
   const blinkP = progress(t, ...marks.blink);
   const blink = blinkP > 0 && blinkP < 1 ? Math.sin(Math.PI * blinkP) : 0;
-
   const settle = settleToCard ? easeInOutCubic(progress(t, marks.face[0] - 350, marks.handoff[0])) : 0;
-  // Invisible until the shader takes over the terminal's box; fades out at the hand-off.
   const alpha = t < marks.swapStart ? 0 : 1 - progress(t, ...marks.handoff);
-
-  // A gentle "breath" in the pebble while it settles.
-  const breatheP = progress(t, 2000, 3200);
-  const breathe = 1 + 0.035 * dampedWobble(breatheP, 1.5) * progress(t, 1900, 2100) * (1 - breatheP);
-
+  const breatheP = progress(t, 2100, 3300);
+  const breathe = 1 + 0.012 * dampedWobble(breatheP, 1.5) * progress(t, 2050, 2200) * (1 - breatheP);
   return {
-    center: [lerp(from.cx, to.cx, move), lerp(from.cy, to.cy, move)],
-    half: [lerp(from.hw, to.hw, size) * breathe, lerp(from.hh, to.hh, size) / breathe],
-    radius,
-    morph,
-    liquid,
-    drops,
-    chrome,
-    face,
-    blink,
-    settle,
-    alpha,
+    center: [from.cx, from.cy],
+    half: [lerp(from.hw, to.hw, morph) * breathe, lerp(from.hh, to.hh, morph) / breathe],
+    radius, morph, liquid, chrome, face, smile, blink, settle, alpha,
   };
 }
