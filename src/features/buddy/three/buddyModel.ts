@@ -155,6 +155,11 @@ export class BuddyModel {
     this.disposables.push(bodyGeo, chrome, eyeGeo, eyeMat, glintGeo, glintMat, mouthMat, this.mouth.geometry, this.mouthOpen.geometry, shadowTex, this.shadow.geometry, this.shadow.material as MeshBasicMaterial);
   }
 
+  /** Hide the physical body when the shared Paper shader skin is ready. */
+  setPaperSkinActive(active: boolean): void {
+    this.body.visible = !active;
+  }
+
   setExpression(name: ExpressionName): void {
     this.target = { ...expressions[name] };
   }

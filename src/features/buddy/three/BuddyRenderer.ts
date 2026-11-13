@@ -21,13 +21,20 @@ export class BuddyRenderer {
   private readonly scene = new Scene();
   private readonly camera = new OrthographicCamera(0, 1, 0, -1, -4000, 4000);
   private readonly env: Texture;
+  private readonly paperSkin: HTMLDivElement | null;
+  private readonly paperSkinObserver: MutationObserver | null;
+  private paperSkinActive = false;
+  private paperPosition = { x: 0, y: 0, size: 0 };
   private width = 0;
   private height = 0;
   /** Buddy's on-screen box (CSS px) this frame and last frame — the only area drawn. */
   private box = { x: 0, y: 0, w: 0, h: 0 };
   private lastBox = { x: 0, y: 0, w: 0, h: 0 };
 
-  constructor(canvas: HTMLCanvasElement, onContextLost: () => void) {
+  constructor(canvas: HTMLCanvasElement, onContextLost: () => void, paperSkin: HTMLDivElement | null = null) {
+    this.paperSkin = paperSkin;
+    this.paperSkinObserver = paperSkin ? new MutationObserver(() => this.syncPaperSkin()) : null;
+    this.paperSkinObserver?.observe(paperSkin!, { childList: true, subtree: true });
     this.renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = SRGBColorSpace;
@@ -44,6 +51,7 @@ export class BuddyRenderer {
     key.position.set(-1, 1.2, 1.5);
     this.scene.add(key, this.model.root);
     this.camera.position.z = 1000;
+    this.syncPaperSkin();
   }
 
   resize(width: number, height: number): void {
@@ -63,13 +71,39 @@ export class BuddyRenderer {
   place(x: number, y: number, size: number): void {
     this.model.root.position.set(x, -y, 0);
     this.model.root.scale.setScalar(size / 2);
+    this.paperPosition = { x, y, size };
+    this.syncPaperSkin();
+    this.positionPaperSkin({ bank: 0, pitch: 0, yaw: 0, stretch: 1, bob: 0, flying: 0 });
     // Generous bounds: tilt, stretch and the contact shadow stay inside.
     const half = size * 0.82;
     this.box = { x: x - half, y: y - half * 0.95, w: half * 2, h: half * 2.15 };
   }
 
   update(dt: number, pose: BuddyPose, talk: number): boolean {
-    return this.model.update(dt, pose, talk);
+    const moving = this.model.update(dt, pose, talk);
+    this.positionPaperSkin(pose);
+    return moving;
+  }
+
+  /** Detect Paper's asynchronously-created canvas and swap out the 3D body mesh. */
+  private syncPaperSkin(): void {
+    if (!this.paperSkin) return;
+    const ready = !!this.paperSkin.querySelector('canvas');
+    if (ready !== this.paperSkinActive) {
+      this.paperSkinActive = ready;
+      this.model.setPaperSkinActive(ready);
+    }
+    this.paperSkin.style.opacity = ready ? '1' : '0';
+  }
+
+  /** Keep the 2D shader skin aligned with the director's exact CSS-pixel seat. */
+  private positionPaperSkin(pose: BuddyPose): void {
+    if (!this.paperSkin || !this.paperSkinActive || this.paperPosition.size <= 0) return;
+    const { x, y, size } = this.paperPosition;
+    const scale = size / 264;
+    this.paperSkin.style.left = (x - 132) + 'px';
+    this.paperSkin.style.top = (y - 111 - pose.bob * size * 0.5) + 'px';
+    this.paperSkin.style.transform = 'scale(' + scale + ', ' + (scale * pose.stretch) + ') rotate(' + pose.bank + 'rad)';
   }
 
   /**
@@ -99,6 +133,9 @@ export class BuddyRenderer {
   }
 
   dispose(): void {
+    this.paperSkinObserver?.disconnect();
+    if (this.paperSkin) this.paperSkin.style.opacity = '0';
+    this.model.setPaperSkinActive(false);
     this.model.dispose();
     this.env.dispose();
     this.renderer.dispose();

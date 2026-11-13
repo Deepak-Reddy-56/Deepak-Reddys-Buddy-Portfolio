@@ -247,3 +247,16 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 ### Validation
 - Vercel build and preview are the next checks. Confirm Paper's WebGL2 canvas initializes, terminal text remains legible, and the existing Run hand-off completes without a blank frame.
 - Buddy's persistent 3D material is still the original Three.js reflective chrome model. The Paper shader is now driving the terminal surface; applying the same effect to the 3D head is a separate follow-up because Paper's documented React component renders a 2D canvas mask, while Buddy is a live Three.js mesh.
+
+
+## 2026-11-13 — Paper Liquid Metal on Buddy's skin
+
+- Added a transparent pebble mask for Buddy and render it with the same pinned Paper Liquid Metal shader used by the terminal.
+- Layered the shader skin beneath the existing Three.js eyes and mouth. The Three.js body mesh is hidden only after the Paper canvas is detected; the original physical body is restored if the Paper canvas is unavailable or its stage is disposed.
+- The Paper skin tracks the director's CSS-pixel position and size, with a light bank/stretch/bob transform. The existing 3D face remains responsible for gaze, blink, speech mouth movement, expressions and scroll/menu flight.
+- This introduces a persistent Paper WebGL2 canvas alongside the existing Three.js canvas after the intro. It is one additional context; Paper is mounted at the small, fixed material dimensions rather than full viewport dimensions.
+
+### Validation still required
+- Check that the SVG mask is transparent outside the Buddy silhouette, Paper's canvas initializes in supported browsers, and the eyes/mouth layer stays registered while Buddy moves.
+- Test loss of the Paper context: the physical Three.js body should reappear, leaving Buddy visible.
+- Test mobile and reduced-motion paths. Reduced-motion continues to use the existing static placeholders and does not mount either Buddy shader.

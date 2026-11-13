@@ -4,7 +4,7 @@
 - Project: https://github.com/paper-design/shaders
 - Packages: @paper-design/shaders-react and @paper-design/shaders, pinned at 0.0.82
 - License: Apache-2.0
-- Use: Paper Liquid Metal is rendered as the animated terminal surface.
+- Use: Paper Liquid Metal is used for the animated terminal surface and Buddy's masked chrome skin.
 - Required LICENSE and NOTICE files are included in THIRD_PARTY_LICENSES/.
 
 ## WebGL Glass Carousel

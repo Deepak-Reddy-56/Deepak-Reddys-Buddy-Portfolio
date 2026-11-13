@@ -75,4 +75,4 @@ src/
 
 
 ### Liquid metal material
-The intro terminal uses Paper's Liquid Metal shader (`@paper-design/shaders-react`, pinned at `0.0.82`) as a full-window material layer. Terminal copy remains DOM content above the canvas. Buddy's persistent Three.js head remains its own reflective 3D mesh for this first pass; the build log records that integration boundary.
+The intro terminal and Buddy's chrome body use Paper's Liquid Metal shader (`@paper-design/shaders-react`, pinned at `0.0.82`). Buddy's transparent masked shader skin follows his measured seat and flight; Three.js continues to render the eyes, mouth, expressions and motion.
