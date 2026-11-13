@@ -148,7 +148,8 @@ export class BuddyRenderer {
     this.model.setPaperSkinActive(false);
     this.model.dispose();
     this.env.dispose();
-    this.renderer.dispose();
-    this.renderer.forceContextLoss();
+    // Dispose renderer resources but keep the canvas context reusable. React
+    // Strict Mode may immediately recreate the renderer on this same canvas.
+    // The browser can reclaim the context when the canvas is actually removed.
   }
 }

@@ -123,7 +123,9 @@ export class ShaderStage {
     const gl = this.gl;
     gl.deleteBuffer(this.buffer);
     gl.deleteProgram(this.program);
-    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    // Do not force-loss the context here. React Strict Mode replays effect
+    // setup/cleanup on the same canvas; the next setup must be able to reuse it.
+    // Once the canvas is detached and collected, the browser can reclaim the context.
   }
 
   private handleContextLost = (event: Event): void => {
