@@ -198,3 +198,12 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - **Branch:** `m3-buddy-character` @ `5899c1d` + uncommitted M3 work. Not pushed; M4 not started.
 - **Known issues:** GPU frame rate and real-device scroll feel unverified · real TTS audio unheard in sandbox · on mobile the middle of each long flight is off screen (the long-section rule plus 20 px margins; see DECISIONS).
 - **Exact next task:** owner reviews the 390/1024 recordings; on approval commit `feat(m3): …` and push `m3-buddy-character`.
+
+## Checkpoint — 2026-11-13 (M3 committed and pushed)
+- **Milestone:** M3 approved by owner, committed and pushed. M4 not started.
+- **Branch / commit:** `m3-buddy-character` @ `78fc956` (from `5899c1d`). `main`, `m1-visual-foundation`, `m2-introduction` untouched; nothing merged.
+- **Deployment:** Vercel commit status **success** ("Deployment has completed").
+  - Inspect: https://vercel.com/deepak-2630s-projects/deepak-reddys-buddy-portfolio/2dGGWw5B63EASXaw8QG87yrzwZaJ
+  - Preview is behind Vercel Deployment Protection (as in M2); rendered output on the preview not verified from the sandbox.
+- **Known issues:** GPU frame rate, real-device scroll feel and real TTS audio unverified (sandbox: software rendering, no voices) · mobile mid-flight runs just off screen (20 px margins).
+- **Exact next task:** owner checks the preview on real devices; then plan M4 (homepage storytelling and interactive project carousel) for approval.
