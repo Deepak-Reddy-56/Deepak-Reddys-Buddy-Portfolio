@@ -95,41 +95,39 @@ void main() {
       vec2 uv = q / w;
       float faa = 1.0 / (w * u_dpr);
       float open = max(1.0 - u_blink, 0.08);
-      vec2 eyeR = vec2(0.056, 0.081 * open) * u_face;
+      vec2 eyeR = vec2(0.095, 0.136 * open) * u_face;
       float eyes = 1.0;
       float shine = 0.0;
       for (int i = 0; i < 2; i++) {
-        float s = i == 0 ? -1.0 : 1.0;
-        vec2 c = vec2(0.014 + s * 0.1185, -0.0706);
+        vec2 c = i == 0 ? vec2(-0.25, -0.02) : vec2(0.075, -0.02);
         vec2 ep = uv - c;
         float de = sdEllipse(ep, max(eyeR, vec2(1e-4)));
         eyes = min(eyes, smoothstep(-faa, faa, de));
-        float dh = sdEllipse(ep - vec2(0.016, -0.036 * open) * u_face, max(vec2(0.02, 0.023 * open) * u_face, vec2(1e-4)));
+        float dh = sdEllipse(ep - vec2(0.022, -0.045 * open) * u_face, max(vec2(0.03, 0.043 * open) * u_face, vec2(1e-4)));
         shine = max(shine, 1.0 - smoothstep(-faa, faa, dh));
       }
       // radial-gradient(120% 100% at 50% 30%, #2a2a2e, #050506 70%) per eye
-      float side = uv.x < 0.014 ? -1.0 : 1.0;
-      vec2 ec = vec2(0.014 + side * 0.1185, -0.0706 - 0.0324);
-      float te = length((uv - ec) / vec2(0.1344, 0.162));
+      vec2 ec = uv.x < -0.08 ? vec2(-0.25, -0.02) : vec2(0.075, -0.02);
+      float te = length((uv - ec) / vec2(0.19, 0.27));
       vec3 eyeColor = mix(hex(42.0, 42.0, 46.0), hex(5.0, 5.0, 6.0), clamp(te / 0.7, 0.0, 1.0));
       color = mix(eyeColor, color, eyes);
       color = mix(color, vec3(1.0), shine * (1.0 - eyes) * step(0.3, open));
 
       // A separate oval nose sits between the eyes and the full curved smile.
       float noseD = sdEllipse(
-        uv - vec2(0.014, 0.018),
-        max(vec2(0.064, 0.038) * u_face, vec2(1e-4))
+        uv - vec2(-0.068, 0.175),
+        max(vec2(0.072, 0.053) * u_face, vec2(1e-4))
       );
       float nose = 1.0 - smoothstep(-faa, faa, noseD);
       color = mix(color, hex(5.0, 5.0, 7.0), nose);
 
       // A wider, complete U-shaped smile; its open form follows Buddy's speech.
       if (u_smile > 0.001) {
-        vec2 m = (uv - vec2(0.014, 0.068)) / max(u_smile, 1e-3);
-        float outer = sdEllipse(m, vec2(0.060, 0.055));
-        float inner = sdEllipse(m, vec2(0.046, 0.042));
+        vec2 m = (uv - vec2(-0.06, 0.30)) / max(u_smile, 1e-3);
+        float outer = sdEllipse(m, vec2(0.12, 0.055));
+        float inner = sdEllipse(m, vec2(0.10, 0.040));
         float mouth = (1.0 - smoothstep(-faa, faa, outer)) * smoothstep(-faa, faa, inner) * step(0.0, m.y);
-        float openMouth = 1.0 - smoothstep(-faa, faa, sdEllipse(m - vec2(0.0, 0.031), vec2(0.045, 0.005 + 0.025 * u_talk)));
+        float openMouth = 1.0 - smoothstep(-faa, faa, sdEllipse(m - vec2(0.0, 0.034), vec2(0.09, 0.006 + 0.025 * u_talk)));
         mouth = max(mouth, openMouth * step(0.02, u_talk));
         color = mix(color, hex(13.0, 13.0, 15.0), mouth * clamp(u_smile, 0.0, 1.0));
       }

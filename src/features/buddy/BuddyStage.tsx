@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { LiquidMetal } from '@paper-design/shaders-react';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { debugFlag } from '../../lib/debug';
 import styles from './BuddyStage.module.css';
@@ -119,26 +118,12 @@ export function BuddyStage({
   return (
     <>
       <div ref={paperSkinRef} className={styles.paperSkin} aria-hidden="true">
-        <LiquidMetal
-          className={styles.paperShader}
-          width="100%"
-          height="100%"
-          image="/buddy-mask.svg"
-          shape="none"
-          colorBack="#AAAAAC00"
-          colorTint="#FFFFFF"
-          repetition={2}
-          softness={0.1}
-          shiftRed={0.3}
-          shiftBlue={0.3}
-          distortion={0.07}
-          contour={0.4}
-          angle={70}
-          speed={0.85}
-          scale={1}
-          fit="contain"
-          minPixelRatio={1.25}
-          maxPixelCount={900000}
+        <img
+          className={styles.referenceImage}
+          src="/buddy-reference.webp"
+          alt=""
+          draggable={false}
+          decoding="async"
         />
       </div>
       <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />

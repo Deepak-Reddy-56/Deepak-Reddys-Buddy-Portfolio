@@ -18,7 +18,7 @@
 
 /* Hero: the character is the page's focal point. */
 .hero {
-  --buddy-size: clamp(132px, 10vw, 152px);
+  --buddy-size: clamp(110px, 8vw, 132px);
   flex-direction: column;
   gap: clamp(20px, 2vw, 28px);
   text-align: center;
@@ -51,7 +51,7 @@
 
 @media (max-width: 640px) {
   .hero {
-    --buddy-size: clamp(104px, 30vw, 120px);
+    --buddy-size: clamp(92px, 26vw, 108px);
     gap: 16px;
   }
 

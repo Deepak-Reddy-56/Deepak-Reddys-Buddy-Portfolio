@@ -377,3 +377,23 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 ### Validation
 - Source-level changes are grouped in one commit on `adamperlis-current-rebuild`.
 - Browser/GPU rendering, the intro-to-Paper cross-fade, and `npm run typecheck` / `npm run build` still require verification in the owner's local browser environment.
+
+
+## 2026-11-15 — Match the approved Buddy artwork
+
+### Visual review findings
+- The first post-handoff recording showed the Paper Metal bands sweeping across the body into a much darker look than the supplied reference.
+- The procedural face was proportioned incorrectly: the eyes were too small and too symmetrical, the reflective nose sat too high, and the wide U-shaped mouth crowded the centre of the face.
+
+### Changes
+- Added the owner's approved Buddy image as `public/buddy-reference.webp` with a transparent background. The settled character and reduced-motion fallback now use this exact artwork.
+- Kept the existing director's seat measurement, flight path, scale and contextual positioning; the exact sprite is moved and tilted through the same reserved seats.
+- Reduced the hero seat to 110–132 px on desktop and 92–108 px on mobile.
+- Kept a Three.js fallback if the image fails to load, but hide its output when the canonical artwork is ready.
+- Refined the fallback face and intro shader coordinates: larger asymmetrical eyes, a flat oval nose lower on the face, and a small curved smile line.
+- The Paper Liquid Metal shader remains part of the terminal/intro experience; it no longer changes the settled Buddy's approved material pattern.
+
+### Validation
+- Production build must pass after the asset and renderer changes.
+- Verify desktop at 1024 px and a wide viewport; check the exact image hand-off, sprite-to-seat alignment, and that no duplicated fallback face appears.
+- Verify mobile, reduced motion, and missing-image fallback.

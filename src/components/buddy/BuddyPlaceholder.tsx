@@ -8,15 +8,7 @@ import styles from './BuddyPlaceholder.module.css';
 export function BuddyPlaceholder() {
   return (
     <span className={styles.root} aria-hidden="true">
-      <span className={styles.body}>
-        <span className={styles.sheen} />
-        <span className={styles.face}>
-          <span className={styles.eye} />
-          <span className={styles.eye} />
-          <span className={styles.nose} />
-          <span className={styles.mouth} />
-        </span>
-      </span>
+      <img className={styles.image} src="/buddy-reference.webp" alt="" draggable={false} />
     </span>
   );
 }

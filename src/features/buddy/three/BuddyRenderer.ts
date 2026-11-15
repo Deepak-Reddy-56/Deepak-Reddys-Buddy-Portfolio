@@ -24,6 +24,7 @@ export class BuddyRenderer {
   private readonly paperSkin: HTMLDivElement | null;
   private readonly paperSkinObserver: MutationObserver | null;
   private readonly onPaperSkinReady?: () => void;
+  private readonly onPaperImageChange = () => this.syncPaperSkin();
   private paperSkinActive = false;
   private paperSkinReadyReported = false;
   private disposed = false;
@@ -45,6 +46,8 @@ export class BuddyRenderer {
     this.onPaperSkinReady = onPaperSkinReady;
     this.paperSkinObserver = paperSkin ? new MutationObserver(() => this.syncPaperSkin()) : null;
     this.paperSkinObserver?.observe(paperSkin!, { childList: true, subtree: true });
+    paperSkin?.querySelector('img')?.addEventListener('load', this.onPaperImageChange);
+    paperSkin?.querySelector('img')?.addEventListener('error', this.onPaperImageChange);
     this.renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = SRGBColorSpace;
@@ -99,7 +102,12 @@ export class BuddyRenderer {
   /** Detect Paper's asynchronously-created canvas and swap out the 3D body mesh. */
   private syncPaperSkin(): void {
     if (!this.paperSkin) return;
-    const ready = !!this.paperSkin.querySelector('canvas');
+    const image = this.paperSkin.querySelector<HTMLImageElement>('img');
+    const ready = image
+      ? image.complete && image.naturalWidth > 0
+      : !!this.paperSkin.querySelector('canvas');
+    if (image?.complete && image.naturalWidth === 0) this.paperSkin.dataset.error = 'true';
+    else delete this.paperSkin.dataset.error;
     if (ready !== this.paperSkinActive) {
       this.paperSkinActive = ready;
       this.model.setPaperSkinActive(ready);
@@ -127,7 +135,7 @@ export class BuddyRenderer {
     const { x, y, size } = this.paperPosition;
     const scale = size / 264;
     this.paperSkin.style.left = (x - 132) + 'px';
-    this.paperSkin.style.top = (y - 111 - pose.bob * size * 0.5) + 'px';
+    this.paperSkin.style.top = (y - 114 - pose.bob * size * 0.5) + 'px';
     this.paperSkin.style.transform = 'scale(' + scale + ', ' + (scale * pose.stretch) + ') rotate(' + pose.bank + 'rad)';
   }
 
@@ -137,6 +145,10 @@ export class BuddyRenderer {
    */
   render(): void {
     if (!this.width || !this.height) return;
+    if (this.paperSkinActive) {
+      this.lastBox = this.box;
+      return;
+    }
     const a = this.box;
     const b = this.lastBox;
     const x0 = Math.max(0, Math.floor(Math.min(a.x, b.w ? b.x : a.x)));
@@ -160,7 +172,12 @@ export class BuddyRenderer {
   dispose(): void {
     this.disposed = true;
     this.paperSkinObserver?.disconnect();
-    if (this.paperSkin) delete this.paperSkin.dataset.ready;
+    this.paperSkin?.querySelector('img')?.removeEventListener('load', this.onPaperImageChange);
+    this.paperSkin?.querySelector('img')?.removeEventListener('error', this.onPaperImageChange);
+    if (this.paperSkin) {
+      delete this.paperSkin.dataset.ready;
+      delete this.paperSkin.dataset.error;
+    }
     this.model.setPaperSkinActive(false);
     this.model.dispose();
     this.env.dispose();

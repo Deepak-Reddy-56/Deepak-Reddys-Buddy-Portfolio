@@ -7,7 +7,8 @@ import {
   MeshPhysicalMaterial,
   PlaneGeometry,
   SphereGeometry,
-  TorusGeometry,
+  QuadraticBezierCurve3,
+  TubeGeometry,
   Vector3,
 } from 'three';
 import { expressions, type ExpressionName, type ExpressionParams } from '../expressions';
@@ -85,7 +86,6 @@ export class BuddyModel {
   private readonly body: Mesh;
   private readonly face = new Group();
   private readonly eyes: { group: Group; base: Vector3 }[] = [];
-  private readonly nose: Mesh;
   private readonly mouth: Mesh;
   private readonly mouthOpen: Mesh;
   private readonly shadow: Mesh;
@@ -116,46 +116,52 @@ export class BuddyModel {
     const eyeMat = new MeshPhysicalMaterial({ color: '#030304', roughness: 0.4, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.2, envMapIntensity: 0.25 });
     const glintGeo = new SphereGeometry(1, 16, 12);
     const glintMat = new MeshBasicMaterial({ color: '#ffffff' });
-    for (const side of [-1, 1]) {
-      const base = surfacePoint(0.028 + side * 0.237, 0.141);
+    // These slightly asymmetric positions and larger ovals match the supplied Buddy artwork.
+    const eyePositions: [number, number][] = [[-0.52, -0.05], [0.15, 0]];
+    for (const [x, y] of eyePositions) {
+      const base = surfacePoint(x, y);
       const group = new Group();
       group.position.copy(base);
       group.lookAt(base.clone().add(surfaceNormal(base)));
       const eye = new Mesh(eyeGeo, eyeMat);
-      eye.scale.set(0.112, 0.162, 0.045);
+      eye.scale.set(0.19, 0.27, 0.045);
+
       const glint = new Mesh(glintGeo, glintMat);
-      glint.scale.set(0.04, 0.046, 0.01);
-      glint.position.set(0.032, 0.072, 0.04);
-      group.add(eye, glint);
+      glint.scale.set(0.055, 0.072, 0.01);
+      glint.position.set(0.035, 0.105, 0.05);
+      const lowerGlint = new Mesh(glintGeo, glintMat);
+      lowerGlint.scale.set(0.022, 0.028, 0.008);
+      lowerGlint.position.set(-0.025, -0.075, 0.052);
+
+      group.add(eye, glint, lowerGlint);
       this.face.add(group);
       this.eyes.push({ group, base: base.clone() });
     }
 
-    // Nose: a distinct glossy oval, matching the approved Buddy reference.
-    const nosePoint = surfacePoint(0.028, 0.02);
+    // The nose is a simple matte oval, not a reflective 3D bump.
+    const nosePoint = surfacePoint(-0.13, -0.31);
     const noseGroup = new Group();
-    noseGroup.position.copy(nosePoint).add(surfaceNormal(nosePoint).multiplyScalar(0.018));
+    noseGroup.position.copy(nosePoint).add(surfaceNormal(nosePoint).multiplyScalar(0.014));
     noseGroup.lookAt(nosePoint.clone().add(surfaceNormal(nosePoint)));
     const noseGeo = new SphereGeometry(1, 24, 16);
-    const noseMat = new MeshPhysicalMaterial({
-      color: '#050506',
-      roughness: 0.24,
-      metalness: 0,
-      clearcoat: 0.85,
-      clearcoatRoughness: 0.08,
-    });
-    this.nose = new Mesh(noseGeo, noseMat);
-    this.nose.scale.set(0.14, 0.095, 0.045);
-    noseGroup.add(this.nose);
+    const noseMat = new MeshBasicMaterial({ color: '#050506' });
+    const nose = new Mesh(noseGeo, noseMat);
+    nose.scale.set(0.14, 0.10, 0.045);
+    noseGroup.add(nose);
     this.face.add(noseGroup);
 
-    // A complete, wider U-shaped smile with a separate opening for speech.
-    const mouthPoint = surfacePoint(0.028, -0.12);
+    // A restrained curved smile line with a separate speech opening.
+    const mouthPoint = surfacePoint(-0.12, -0.56);
     const mouthMat = new MeshBasicMaterial({ color: '#0d0d0f' });
-    this.mouth = new Mesh(new TorusGeometry(0.11, 0.012, 12, 48, Math.PI), mouthMat);
-    this.mouth.rotation.z = Math.PI;
+    const smileCurve = new QuadraticBezierCurve3(
+      new Vector3(-0.24, 0.055, 0.035),
+      new Vector3(0, -0.095, 0.055),
+      new Vector3(0.24, 0.055, 0.035),
+    );
+    this.mouth = new Mesh(new TubeGeometry(smileCurve, 32, 0.012, 8, false), mouthMat);
     this.mouthOpen = new Mesh(new SphereGeometry(1, 24, 16), mouthMat);
-    this.mouthOpen.scale.set(0.08, 0.001, 0.01);
+    this.mouthOpen.position.set(0, -0.06, 0.06);
+    this.mouthOpen.scale.set(0.075, 0.001, 0.01);
     const mouthGroup = new Group();
     mouthGroup.position.copy(mouthPoint).add(surfaceNormal(mouthPoint).multiplyScalar(0.018));
     mouthGroup.lookAt(mouthPoint.clone().add(surfaceNormal(mouthPoint)));
@@ -177,6 +183,8 @@ export class BuddyModel {
   /** Hide the physical body when the shared Paper shader skin is ready. */
   setPaperSkinActive(active: boolean): void {
     this.body.visible = !active;
+    this.face.visible = !active;
+    this.shadow.visible = !active;
   }
 
   setExpression(name: ExpressionName): void {
@@ -218,8 +226,8 @@ export class BuddyModel {
       group.scale.set(side * e.eyeWidth, side * open * e.eyeHeight, 1);
     });
     this.mouth.scale.set(e.mouthWidth, e.mouthCurve, 1);
-    this.mouthOpen.scale.set(0.08 * e.mouthWidth, 0.001 + 0.035 * talk, 0.01);
-    this.mouthOpen.position.y = -0.035 - 0.015 * talk;
+    this.mouthOpen.scale.set(0.075 * e.mouthWidth, 0.001 + 0.025 * talk, 0.01);
+    this.mouthOpen.position.y = -0.06 - 0.012 * talk;
     return moving;
   }
 

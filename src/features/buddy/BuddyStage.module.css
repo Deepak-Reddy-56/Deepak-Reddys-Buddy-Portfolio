@@ -1,13 +1,12 @@
-/* Paper's masked chrome skin sits beneath Buddy's transparent face canvas. */
+/* Exact approved Buddy artwork, placed in CSS pixels by the Buddy director. */
 .paperSkin {
   position: fixed;
   z-index: var(--z-buddy);
   top: 0;
   left: 0;
   width: 264px;
-  height: 222px;
+  height: 228px;
   overflow: visible;
-  isolation: isolate;
   opacity: 0;
   pointer-events: none;
   transform: translate3d(-1200px, -1200px, 0);
@@ -16,37 +15,27 @@
   transition: opacity 280ms var(--ease-in-out);
 }
 
-.paperShader {
-  position: absolute;
-  inset: 0;
+.referenceImage {
   display: block;
   width: 100%;
   height: 100%;
-  pointer-events: none;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.paperShader canvas {
-  position: absolute !important;
-  inset: 0 !important;
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  pointer-events: none;
-}
-
-/* The face canvas is later in the DOM, above the Paper body. */
 .canvas {
   position: fixed;
   z-index: var(--z-buddy);
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0;
+  opacity: 1;
   pointer-events: none;
   transition: opacity 280ms var(--ease-in-out);
 }
 
-/* Keep both renderers hidden until the intro's final hand-off window. */
+/* Both persistent layers stay hidden while the terminal/morph owns the screen. */
 :global(html[data-intro='playing']) .canvas,
 :global(html[data-intro='playing']) .paperSkin,
 :global(html[data-intro='leaving']) .canvas,
@@ -55,10 +44,21 @@
   transition: none;
 }
 
-/* Cross-fade the warmed Paper body + live face over the morph's final frame. */
-:global(html[data-intro='handoff']) .canvas,
+/* If the exact image is ready, it replaces the temporary 3D fallback. */
 :global(html[data-intro='handoff']) .paperSkin[data-ready='true'],
-:global(html:not([data-intro])[data-buddy='3d']) .canvas,
 :global(html:not([data-intro])[data-buddy='3d']) .paperSkin[data-ready='true'] {
   opacity: 1;
+}
+
+:global(html[data-intro='handoff']) .canvas,
+:global(html:not([data-intro])[data-buddy='3d']) .canvas {
+  opacity: 1;
+}
+
+.paperSkin[data-ready='true'] + .canvas {
+  opacity: 0 !important;
+}
+
+.paperSkin[data-error='true'] + .canvas {
+  opacity: 1 !important;
 }
