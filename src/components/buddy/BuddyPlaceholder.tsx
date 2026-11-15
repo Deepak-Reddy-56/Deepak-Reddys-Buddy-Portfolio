@@ -1,14 +1,21 @@
 import styles from './BuddyPlaceholder.module.css';
 
 /**
- * M1 stand-in for Buddy: a CSS-only chrome pebble with eyes, used to lock in
- * scale, placement and rhythm. M3 replaces it with the real 3D character
- * behind the same BuddySeat interface. Decorative — the seat carries the text.
+ * Lightweight animated stand-in used only before the live Paper shader is ready
+ * or when reduced motion / unavailable GPU rendering prevents the live material.
  */
 export function BuddyPlaceholder() {
   return (
     <span className={styles.root} aria-hidden="true">
-      <img className={styles.image} src="/buddy-reference.webp" alt="" draggable={false} />
+      <span className={styles.body}>
+        <span className={styles.ribbon} />
+        <span className={styles.face}>
+          <span className={styles.eyeLeft}><i /></span>
+          <span className={styles.eyeRight}><i /></span>
+          <span className={styles.nose} />
+          <span className={styles.smile} />
+        </span>
+      </span>
     </span>
   );
 }

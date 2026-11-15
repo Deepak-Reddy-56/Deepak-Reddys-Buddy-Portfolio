@@ -397,3 +397,20 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Production build must pass after the asset and renderer changes.
 - Verify desktop at 1024 px and a wide viewport; check the exact image hand-off, sprite-to-seat alignment, and that no duplicated fallback face appears.
 - Verify mobile, reduced motion, and missing-image fallback.
+
+
+## 2026-11-15 — Restore the live Liquid Metal Buddy
+
+### Review finding
+- The preceding revision used `buddy-reference.webp` as the settled character. This made Buddy a static image and removed the live metallic surface animation. That was incorrect for the requested experience.
+
+### Changes
+- Restored Paper's `LiquidMetal` component as the actual Buddy body renderer, with the supplied silhouette used only as a transparent mask.
+- Added independent SVG face layers for the eyes, highlights, small oval nose and complete curved smile; the eyes blink and the mouth reacts to the renderer's speech envelope.
+- Kept the face and shader inside the same positioned element so the existing Buddy director still moves, tilts and scales the whole character between sections.
+- Removed the static reference image from both the normal renderer and the loading/reduced-motion placeholder.
+- Kept the existing intro transition and terminal choreography unchanged.
+
+### Validation
+- Paper documents the `image` prop as a transparent effect mask and `speed` as the animation-loop control.
+- Production build and Vercel preview must pass. Owner visual check is still required for chrome motion, face alignment, and 1024 px scale.

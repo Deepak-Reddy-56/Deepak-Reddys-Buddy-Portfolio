@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { LiquidMetal } from '@paper-design/shaders-react';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { debugFlag } from '../../lib/debug';
 import styles from './BuddyStage.module.css';
@@ -118,13 +119,43 @@ export function BuddyStage({
   return (
     <>
       <div ref={paperSkinRef} className={styles.paperSkin} aria-hidden="true">
-        <img
-          className={styles.referenceImage}
-          src="/buddy-reference.webp"
-          alt=""
-          draggable={false}
-          decoding="async"
-        />
+        <div className={styles.paperShader}>
+          <LiquidMetal
+            width={264}
+            height={228}
+            image="/buddy-mask.svg"
+            colorBack="#a7aab2"
+            colorTint="#ffffff"
+            repetition={2.2}
+            softness={0.14}
+            shiftRed={0.3}
+            shiftBlue={0.3}
+            distortion={0.09}
+            contour={0.4}
+            angle={70}
+            speed={0.72}
+            scale={1}
+            fit="contain"
+            minPixelRatio={1}
+            maxPixelCount={250000}
+          />
+        </div>
+
+        <svg className={styles.face} viewBox="0 0 338 292" preserveAspectRatio="none">
+          <g className={styles.eyeLeft}>
+            <ellipse cx="81" cy="154" rx="29" ry="46" fill="#050506" transform="rotate(-9 81 154)" />
+            <ellipse cx="74" cy="136" rx="10" ry="17" fill="#fff" />
+            <ellipse cx="69" cy="168" rx="4" ry="5.5" fill="#fff" opacity="0.96" />
+          </g>
+          <g className={styles.eyeRight}>
+            <ellipse cx="195" cy="140" rx="34" ry="49" fill="#050506" transform="rotate(5 195 140)" />
+            <ellipse cx="185" cy="119" rx="11" ry="18" fill="#fff" />
+            <ellipse cx="185" cy="160" rx="4.5" ry="6" fill="#fff" opacity="0.96" />
+          </g>
+          <ellipse className={styles.nose} cx="146" cy="203" rx="26" ry="18" fill="#050506" />
+          <path className={styles.smile} d="M151 235 Q171 250 191 235" />
+          <ellipse className={styles.talkingMouth} cx="171" cy="239" rx="15" ry="7" />
+        </svg>
       </div>
       <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />
     </>

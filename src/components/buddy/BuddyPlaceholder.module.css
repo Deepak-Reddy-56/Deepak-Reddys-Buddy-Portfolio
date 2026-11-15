@@ -1,5 +1,6 @@
 .root {
   --w: var(--buddy-size, 96px);
+  position: relative;
   display: block;
   width: var(--w);
   height: calc(var(--w) * 0.864);
@@ -7,11 +8,109 @@
   overflow: visible;
 }
 
-.image {
+.body {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 48% 52% 48% 52% / 49% 48% 52% 51%;
+  background:
+    radial-gradient(70% 54% at 27% 20%, rgba(255,255,255,.98), transparent 58%),
+    radial-gradient(76% 68% at 78% 85%, rgba(38,42,52,.78), transparent 65%),
+    linear-gradient(145deg,#555a66 0%,#f7f8fa 18%,#8a8f9b 34%,#343945 48%,#f1f2f5 62%,#777d89 79%,#f8f8fa 91%,#4b505c 100%);
+  background-size: 180% 180%;
+  animation: chromeDrift 4.8s ease-in-out infinite alternate;
+  box-shadow:
+    inset 5px 7px 12px rgba(255,255,255,.72),
+    inset -7px -9px 15px rgba(25,28,37,.5),
+    0 8px 16px rgba(20,22,30,.12);
+}
+
+.ribbon {
+  position: absolute;
+  inset: 6% 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(151deg,transparent 14%,rgba(42,220,255,.85) 21%,rgba(255,255,255,.92) 24%,rgba(255,173,108,.88) 28%,transparent 34%),
+    linear-gradient(12deg,transparent 63%,rgba(255,255,255,.78) 68%,rgba(85,96,122,.35) 72%,transparent 78%);
+  background-size: 190% 190%;
+  mix-blend-mode: screen;
+  animation: ribbonDrift 5.6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+}
+
+.eyeLeft,
+.eyeRight {
+  position: absolute;
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  user-select: none;
-  -webkit-user-drag: none;
+  width: 18%;
+  height: 32%;
+  top: 38%;
+  border-radius: 50%;
+  background: #050506;
+  box-shadow: inset 2px 2px 2px rgba(255,255,255,.16);
+  animation: placeholderBlink 5.2s infinite;
+}
+
+.eyeLeft { left: 15%; transform: rotate(-9deg); }
+.eyeRight { left: 47%; top: 32%; width: 20%; height: 34%; transform: rotate(5deg); animation-delay: .08s; }
+
+.eyeLeft i,
+.eyeRight i {
+  position: absolute;
+  top: 15%;
+  left: 24%;
+  width: 32%;
+  height: 36%;
+  border-radius: 50%;
+  background: white;
+}
+
+.nose {
+  position: absolute;
+  left: 36%;
+  top: 63%;
+  width: 16%;
+  height: 12%;
+  border-radius: 50%;
+  background: #050506;
+}
+
+.smile {
+  position: absolute;
+  left: 45%;
+  top: 80%;
+  width: 14%;
+  height: 7%;
+  border-bottom: 2px solid #111114;
+  border-radius: 0 0 100% 100%;
+  transform: rotate(6deg);
+}
+
+@keyframes chromeDrift {
+  from { background-position: 0% 20%; }
+  to { background-position: 100% 80%; }
+}
+
+@keyframes ribbonDrift {
+  from { background-position: 0% 45%; }
+  to { background-position: 100% 55%; }
+}
+
+@keyframes placeholderBlink {
+  0%, 92%, 95%, 100% { scale: 1 1; }
+  93.2%, 94.2% { scale: 1 .08; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body,
+  .ribbon,
+  .eyeLeft,
+  .eyeRight {
+    animation: none;
+  }
 }

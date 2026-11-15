@@ -1,43 +1,29 @@
 # Buddy — character direction
 
 ## Chosen direction
-Abstract companion (Option B), using the broad visual language of a rounded, polished, expressive liquid-metal character.
+A compact, expressive liquid-chrome companion with an organic pebble silhouette and a warm, slightly mischievous personality.
 
 ## Visual ingredients
-- Soft, compact, rounded silhouette.
-- Reflective chrome / pearl surface with restrained iridescent edge highlights.
-- Large, high-contrast eyes with readable highlights.
-- Large, slightly asymmetric glossy black eyes with two white glints.
-- A separate matte black oval nose placed lower on the face.
-- A small, complete curved smile line beneath the nose, rather than a wide U-shaped mouth.
-- The supplied Buddy artwork is the canonical settled appearance; do not reinterpret its face or chrome pattern.
-- A recognizable outline at small avatar sizes.
-- Friendly, curious, a little mischievous—not a generic robot or assistant icon.
+- The approved Buddy silhouette is used as a transparent mask, not as a displayed bitmap.
+- Paper Liquid Metal continuously animates the silver body and iridescent ribbons.
+- Eyes, white highlights, matte black oval nose, and complete curved smile are independent SVG layers above the shader.
+- The face stays crisp while the material moves.
+- The small hero size remains close to the Adam Perlis reference scale.
 
 ## Originality boundary
-The Adam Perlis reference is the inspiration for material, scale, and the role of a recurring companion. Buddy must have an original silhouette, face proportions, surface pattern, animation language, and expressions. Do not reuse the reference character's model, texture maps, exact facial geometry, or image assets.
+The Adam Perlis site is a reference for material, scale, and storytelling. Buddy uses the silhouette and face artwork provided by Deepak, with original animation, movement, and dialogue.
 
 ## Personality
 - Curious, observant, encouraging, slightly cheeky.
 - Speaks in short, situational lines.
-- Never pretends to be an AI assistant or a chat widget.
+- Never behaves like a generic chatbot.
 - Guides visitors between chapters and calls attention to meaningful details.
-- Quiet by default; appears when the story needs a guide.
 
-## Build plan
-- The approved reference image is the canonical settled character artwork. It is rendered as a transparent WebP sprite so its chrome pattern, eyes, nose and smile remain exact at every section.
-- The sprite is moved, scaled and tilted by the existing Buddy director. The procedural Three.js model remains as a loading/error fallback.
-- Reduced-motion and unsupported-WebGL states use the same canonical sprite rather than a separately approximated placeholder.
-- M1: CSS stand-in to reserve layout and test composition.
-- M3: custom Three.js / React Three Fiber model and expression system.
-- M6: visitor-facing controls for scale, mood, material, and voice/sound.
-
-## States to design
-Idle · Hello · Curious · Listening · Proud · Thinking · Sleep
-
-## Implementation (M3)
-- Model: `src/features/buddy/three/buddyModel.ts` (procedural; body 2 × 1.68 × 1.6 units; face uses the placeholder's proportions).
-- Material & light: `MeshPhysicalMaterial` chrome + `studioEnvironment.ts` (procedural PMREM studio).
-- Expressions: `src/features/buddy/expressions.ts`; seat → expression map in `src/content/dialogue.ts`.
-- Movement & behaviour: `src/features/buddy/BuddyDirector.ts` (one clock) + `flight.ts` (pure journey maths).
-- Voice: `src/lib/voice/voice.ts` (pluggable provider, `sayOnce`, talk envelope).
+## Implementation
+- Live body: `@paper-design/shaders-react` LiquidMetal, with `public/buddy-mask.svg` as its alpha mask.
+- Face: independent SVG layers inside the same transformed stage element.
+- Blink: CSS eye-group animation.
+- Talking: the voice envelope from BuddyRenderer toggles the animated mouth shape.
+- Positioning and movement: `src/features/buddy/BuddyDirector.ts` and `flight.ts`.
+- Three.js: genuine fallback if Paper's shader cannot initialize.
+- Reduced motion: animated-material motion is removed and the lightweight CSS representation is used.

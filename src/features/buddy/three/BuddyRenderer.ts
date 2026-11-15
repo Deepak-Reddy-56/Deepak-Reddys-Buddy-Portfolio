@@ -24,7 +24,6 @@ export class BuddyRenderer {
   private readonly paperSkin: HTMLDivElement | null;
   private readonly paperSkinObserver: MutationObserver | null;
   private readonly onPaperSkinReady?: () => void;
-  private readonly onPaperImageChange = () => this.syncPaperSkin();
   private paperSkinActive = false;
   private paperSkinReadyReported = false;
   private disposed = false;
@@ -46,8 +45,6 @@ export class BuddyRenderer {
     this.onPaperSkinReady = onPaperSkinReady;
     this.paperSkinObserver = paperSkin ? new MutationObserver(() => this.syncPaperSkin()) : null;
     this.paperSkinObserver?.observe(paperSkin!, { childList: true, subtree: true });
-    paperSkin?.querySelector('img')?.addEventListener('load', this.onPaperImageChange);
-    paperSkin?.querySelector('img')?.addEventListener('error', this.onPaperImageChange);
     this.renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = SRGBColorSpace;
@@ -96,18 +93,17 @@ export class BuddyRenderer {
     this.lastPose = pose;
     const moving = this.model.update(dt, pose, talk);
     this.positionPaperSkin(pose);
+    if (this.paperSkin) {
+      if (talk > 0.08) this.paperSkin.dataset.talking = 'true';
+      else delete this.paperSkin.dataset.talking;
+    }
     return moving;
   }
 
   /** Detect Paper's asynchronously-created canvas and swap out the 3D body mesh. */
   private syncPaperSkin(): void {
     if (!this.paperSkin) return;
-    const image = this.paperSkin.querySelector<HTMLImageElement>('img');
-    const ready = image
-      ? image.complete && image.naturalWidth > 0
-      : !!this.paperSkin.querySelector('canvas');
-    if (image?.complete && image.naturalWidth === 0) this.paperSkin.dataset.error = 'true';
-    else delete this.paperSkin.dataset.error;
+    const ready = !!this.paperSkin.querySelector('canvas');
     if (ready !== this.paperSkinActive) {
       this.paperSkinActive = ready;
       this.model.setPaperSkinActive(ready);
@@ -172,11 +168,9 @@ export class BuddyRenderer {
   dispose(): void {
     this.disposed = true;
     this.paperSkinObserver?.disconnect();
-    this.paperSkin?.querySelector('img')?.removeEventListener('load', this.onPaperImageChange);
-    this.paperSkin?.querySelector('img')?.removeEventListener('error', this.onPaperImageChange);
     if (this.paperSkin) {
       delete this.paperSkin.dataset.ready;
-      delete this.paperSkin.dataset.error;
+      delete this.paperSkin.dataset.talking;
     }
     this.model.setPaperSkinActive(false);
     this.model.dispose();
