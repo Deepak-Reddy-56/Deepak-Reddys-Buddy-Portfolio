@@ -83,7 +83,7 @@ void main() {
     tilt += u_liquid * 0.16 * (vec2(fbm2(q * 0.008 + u_time * 0.6), fbm2(q * 0.008 - u_time * 0.5 + 9.0)) - 0.5);
     vec3 N = normalize(vec3(tilt.x, -tilt.y, 1.0));
 
-    vec3 chrome = shadeChrome(N, u_time, 1.0 - 0.6 * u_face, q.x * 0.0015 + u_time * 0.04, u_face);
+    vec3 chrome = shadeChrome(N, u_time, 1.15, q.x * 0.0018 + u_time * 0.06, u_face);
     vec3 r = reflect(vec3(0.0, 0.0, -1.0), N);
     vec3 glass = vec3(0.082, 0.082, 0.09) + studioEnv(r, u_time) * 0.045 + 0.03 * smoothstep(0.3, 1.0, -q.y / u_half.y);
     color = mix(glass, chrome, u_chrome);
@@ -115,13 +115,21 @@ void main() {
       color = mix(eyeColor, color, eyes);
       color = mix(color, vec3(1.0), shine * (1.0 - eyes) * step(0.3, open));
 
-      // The smile starts after the eyes; it grows into place without overshoot.
+      // A separate oval nose sits between the eyes and the full curved smile.
+      float noseD = sdEllipse(
+        uv - vec2(0.014, 0.018),
+        max(vec2(0.064, 0.038) * u_face, vec2(1e-4))
+      );
+      float nose = 1.0 - smoothstep(-faa, faa, noseD);
+      color = mix(color, hex(5.0, 5.0, 7.0), nose);
+
+      // A wider, complete U-shaped smile; its open form follows Buddy's speech.
       if (u_smile > 0.001) {
-        vec2 m = (uv - vec2(0.014, 0.0424)) / max(u_smile, 1e-3);
-        float outer = sdEllipse(m, vec2(0.045, 0.042));
-        float inner = sdEllipse(m, vec2(0.032, 0.029));
+        vec2 m = (uv - vec2(0.014, 0.068)) / max(u_smile, 1e-3);
+        float outer = sdEllipse(m, vec2(0.060, 0.055));
+        float inner = sdEllipse(m, vec2(0.046, 0.042));
         float mouth = (1.0 - smoothstep(-faa, faa, outer)) * smoothstep(-faa, faa, inner) * step(0.0, m.y);
-        float openMouth = 1.0 - smoothstep(-faa, faa, sdEllipse(m - vec2(0.0, 0.022), vec2(0.036, 0.004 + 0.024 * u_talk)));
+        float openMouth = 1.0 - smoothstep(-faa, faa, sdEllipse(m - vec2(0.0, 0.031), vec2(0.045, 0.005 + 0.025 * u_talk)));
         mouth = max(mouth, openMouth * step(0.02, u_talk));
         color = mix(color, hex(13.0, 13.0, 15.0), mouth * clamp(u_smile, 0.0, 1.0));
       }

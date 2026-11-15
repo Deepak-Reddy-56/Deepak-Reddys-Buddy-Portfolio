@@ -170,7 +170,7 @@ export class BuddyDirector {
 
   private introPlaying(): boolean {
     const state = document.documentElement.dataset.intro;
-    return state === 'playing' || state === 'leaving' || state === 'handoff';
+    return state === 'playing' || state === 'leaving';
   }
 
   private wake(): void {

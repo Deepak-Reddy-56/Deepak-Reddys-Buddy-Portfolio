@@ -81,7 +81,7 @@ export function BuddyStage({
       buddy?.dispose();
       buddy = null;
       buddyRef.current = null;
-      if (paperSkin.isConnected) paperSkin.style.opacity = '0';
+      if (paperSkin.isConnected) delete paperSkin.dataset.ready;
       setBuddyMode(null);
     };
 

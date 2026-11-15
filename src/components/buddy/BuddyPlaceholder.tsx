@@ -13,6 +13,7 @@ export function BuddyPlaceholder() {
         <span className={styles.face}>
           <span className={styles.eye} />
           <span className={styles.eye} />
+          <span className={styles.nose} />
           <span className={styles.mouth} />
         </span>
       </span>

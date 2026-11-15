@@ -84,8 +84,7 @@ export class BuddyRenderer {
     this.paperPosition = { x, y, size };
     this.syncPaperSkin();
     this.positionPaperSkin(this.lastPose);
-    if (this.paperSkinActive && size > 0 && this.paperSkin) this.paperSkin.style.opacity = '1';
-    // Generous bounds: tilt, stretch and the contact shadow stay inside.
+     // Generous bounds: tilt, stretch and the contact shadow stay inside.
     const half = size * 0.82;
     this.box = { x: x - half, y: y - half * 0.95, w: half * 2, h: half * 2.15 };
   }
@@ -109,7 +108,7 @@ export class BuddyRenderer {
     // It becomes visible only after the director has measured its first seat.
     if (ready && this.paperPosition.size > 0) {
       this.positionPaperSkin(this.lastPose);
-      this.paperSkin.style.opacity = '1';
+      this.paperSkin.dataset.ready = 'true';
       if (!this.paperSkinReadyReported) {
         this.paperSkinReadyReported = true;
         // Let the Paper shader paint while still hidden behind the intro layer.
@@ -118,7 +117,7 @@ export class BuddyRenderer {
         }, 240);
       }
     } else {
-      this.paperSkin.style.opacity = '0';
+      delete this.paperSkin.dataset.ready;
     }
   }
 
@@ -161,7 +160,7 @@ export class BuddyRenderer {
   dispose(): void {
     this.disposed = true;
     this.paperSkinObserver?.disconnect();
-    if (this.paperSkin) this.paperSkin.style.opacity = '0';
+    if (this.paperSkin) delete this.paperSkin.dataset.ready;
     this.model.setPaperSkinActive(false);
     this.model.dispose();
     this.env.dispose();

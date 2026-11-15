@@ -242,7 +242,14 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish,
           : m.handoff[0] + Math.min(handoffDuration, t - handoffStartedAt);
         const u = introUniforms(shaderTime, from, to, TERMINAL_RADIUS, !toThreeD, reducedMotion);
         if (handoffStartedAt !== null) {
-          u.alpha = 1 - Math.max(0, Math.min(1, (t - handoffStartedAt) / handoffDuration));
+          const handoffProgress = Math.max(0, Math.min(1, (t - handoffStartedAt) / handoffDuration));
+          const introFaceOpacity = 1 - handoffProgress;
+          u.alpha = introFaceOpacity;
+          // The live Buddy renderer takes over eyes, nose and smile in the same
+          // 280 ms window, preventing a doubled face during the material cross-fade.
+          u.face *= introFaceOpacity;
+          u.smile *= introFaceOpacity;
+          u.blink *= introFaceOpacity;
         }
         stage.set('u_time', shaderTime / 1000);
         stage.set('u_center', u.center);

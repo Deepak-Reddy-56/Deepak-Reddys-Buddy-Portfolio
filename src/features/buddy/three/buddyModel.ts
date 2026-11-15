@@ -85,6 +85,7 @@ export class BuddyModel {
   private readonly body: Mesh;
   private readonly face = new Group();
   private readonly eyes: { group: Group; base: Vector3 }[] = [];
+  private readonly nose: Mesh;
   private readonly mouth: Mesh;
   private readonly mouthOpen: Mesh;
   private readonly shadow: Mesh;
@@ -130,15 +131,33 @@ export class BuddyModel {
       this.eyes.push({ group, base: base.clone() });
     }
 
-    // Mouth: the lower half of a thin torus (a "U"), plus an inner dark ellipse that opens when talking.
-    const mouthPoint = surfacePoint(0.028, -0.0848);
+    // Nose: a distinct glossy oval, matching the approved Buddy reference.
+    const nosePoint = surfacePoint(0.028, 0.02);
+    const noseGroup = new Group();
+    noseGroup.position.copy(nosePoint).add(surfaceNormal(nosePoint).multiplyScalar(0.018));
+    noseGroup.lookAt(nosePoint.clone().add(surfaceNormal(nosePoint)));
+    const noseGeo = new SphereGeometry(1, 24, 16);
+    const noseMat = new MeshPhysicalMaterial({
+      color: '#050506',
+      roughness: 0.24,
+      metalness: 0,
+      clearcoat: 0.85,
+      clearcoatRoughness: 0.08,
+    });
+    this.nose = new Mesh(noseGeo, noseMat);
+    this.nose.scale.set(0.14, 0.095, 0.045);
+    noseGroup.add(this.nose);
+    this.face.add(noseGroup);
+
+    // A complete, wider U-shaped smile with a separate opening for speech.
+    const mouthPoint = surfacePoint(0.028, -0.12);
     const mouthMat = new MeshBasicMaterial({ color: '#0d0d0f' });
-    this.mouth = new Mesh(new TorusGeometry(0.068, 0.0095, 10, 40, Math.PI), mouthMat);
+    this.mouth = new Mesh(new TorusGeometry(0.11, 0.012, 12, 48, Math.PI), mouthMat);
     this.mouth.rotation.z = Math.PI;
     this.mouthOpen = new Mesh(new SphereGeometry(1, 24, 16), mouthMat);
-    this.mouthOpen.scale.set(0.06, 0.001, 0.01);
+    this.mouthOpen.scale.set(0.08, 0.001, 0.01);
     const mouthGroup = new Group();
-    mouthGroup.position.copy(mouthPoint).add(new Vector3(0, 0, 0.01));
+    mouthGroup.position.copy(mouthPoint).add(surfaceNormal(mouthPoint).multiplyScalar(0.018));
     mouthGroup.lookAt(mouthPoint.clone().add(surfaceNormal(mouthPoint)));
     mouthGroup.add(this.mouth, this.mouthOpen);
     this.face.add(mouthGroup);
@@ -152,7 +171,7 @@ export class BuddyModel {
     this.tilt.add(this.body, this.face);
     this.root.add(this.shadow, this.tilt);
 
-    this.disposables.push(bodyGeo, chrome, eyeGeo, eyeMat, glintGeo, glintMat, mouthMat, this.mouth.geometry, this.mouthOpen.geometry, shadowTex, this.shadow.geometry, this.shadow.material as MeshBasicMaterial);
+    this.disposables.push(bodyGeo, chrome, eyeGeo, eyeMat, glintGeo, glintMat, noseGeo, noseMat, mouthMat, this.mouth.geometry, this.mouthOpen.geometry, shadowTex, this.shadow.geometry, this.shadow.material as MeshBasicMaterial);
   }
 
   /** Hide the physical body when the shared Paper shader skin is ready. */
@@ -199,8 +218,8 @@ export class BuddyModel {
       group.scale.set(side * e.eyeWidth, side * open * e.eyeHeight, 1);
     });
     this.mouth.scale.set(e.mouthWidth, e.mouthCurve, 1);
-    this.mouthOpen.scale.set(0.055 * e.mouthWidth, 0.001 + 0.04 * talk, 0.01);
-    this.mouthOpen.position.y = -0.02 - 0.02 * talk;
+    this.mouthOpen.scale.set(0.08 * e.mouthWidth, 0.001 + 0.035 * talk, 0.01);
+    this.mouthOpen.position.y = -0.035 - 0.015 * talk;
     return moving;
   }
 

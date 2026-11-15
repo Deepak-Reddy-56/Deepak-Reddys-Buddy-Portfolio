@@ -7,7 +7,8 @@ Abstract companion (Option B), using the broad visual language of a rounded, pol
 - Soft, compact, rounded silhouette.
 - Reflective chrome / pearl surface with restrained iridescent edge highlights.
 - Large, high-contrast eyes with readable highlights.
-- A tiny, simple mouth; expression comes mainly from eye and body language.
+- A clearly visible, complete curved smile and a separate small glossy black oval nose.
+- Facial features remain crisp, layered above the shader body, and animate independently.
 - A recognizable outline at small avatar sizes.
 - Friendly, curious, a little mischievous—not a generic robot or assistant icon.
 
@@ -22,6 +23,9 @@ The Adam Perlis reference is the inspiration for material, scale, and the role o
 - Quiet by default; appears when the story needs a guide.
 
 ## Build plan
+- The approved visual reference is a compact silver liquid-chrome pebble with flowing cyan/orange iridescent ribbons, large glossy black eyes, a distinct oval nose, and a complete curved smile.
+- Normal rendering: Paper Liquid Metal body mask beneath the live Three.js face.
+- Reduced-motion / unsupported-WebGL fallback: a static CSS chrome interpretation of the same silhouette and face, never the legacy white placeholder.
 - M1: CSS stand-in to reserve layout and test composition.
 - M3: custom Three.js / React Three Fiber model and expression system.
 - M6: visitor-facing controls for scale, mood, material, and voice/sound.

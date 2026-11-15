@@ -359,3 +359,21 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 
 ### Validation
 - Vercel build and browser runtime test required. If this error persists, the new message will identify either `CONTEXT_LOST_WEBGL` or the exact compiler log/source line instead of `unknown error`.
+
+## 2026-11-15 — Buddy chrome hand-off, scale and face refinement
+
+### Source of the visual mismatch
+- The pale Buddy seen at the end of the intro was not the CSS legacy placeholder. It was the intro's custom liquid-chrome fragment shader; after the intro it was replaced by the persistent Paper Liquid Metal skin. The two materials produced visibly different finishes.
+- The persistent Paper skin was held behind the intro state, while the Buddy director stayed dormant through `handoff`, so the live face renderer could not participate in a deliberate final cross-fade.
+
+### Changes
+- The warmed Paper skin and live face canvas now fade in during the intro's existing final hand-off window while the intro shader fades out. The intro face fades with the same progress, avoiding doubled eyes or mouth.
+- Buddy's director now wakes during `handoff` so it can draw the already-measured hero pose before the intro overlay is removed.
+- The hero seat is reduced to 132–152 px on desktop and 104–120 px on small screens; inline seats remain unchanged.
+- The persistent Three.js face now includes a distinct glossy nose and a larger complete U-shaped smile, with a separate speech-opening shape.
+- The intro shader draws the nose and a wider smile so the facial design stays consistent during the morph.
+- The static fallback was changed from the legacy pale placeholder to a chrome-toned interpretation with iridescent ribbons, nose and a complete smile.
+
+### Validation
+- Source-level changes are grouped in one commit on `adamperlis-current-rebuild`.
+- Browser/GPU rendering, the intro-to-Paper cross-fade, and `npm run typecheck` / `npm run build` still require verification in the owner's local browser environment.
