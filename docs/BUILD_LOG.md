@@ -414,3 +414,19 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 ### Validation
 - Paper documents the `image` prop as a transparent effect mask and `speed` as the animation-loop control.
 - Production build and Vercel preview must pass. Owner visual check is still required for chrome motion, face alignment, and 1024 px scale.
+
+
+## 2026-11-15 — Fix opaque rectangular shader background
+
+### Root cause
+- Paper's `colorBack="#a7aab2"` was an opaque background color. The LiquidMetal renderer correctly created a rectangular canvas, but the background color filled the entire canvas outside the Buddy silhouette. This produced the visible grey square/tile seen in the latest recording.
+- The mask was also a hand-drawn approximation despite the repository already containing the user's transparent Buddy artwork.
+
+### Fix
+- Use the alpha channel of the supplied transparent Buddy artwork (`/buddy-reference.webp`) as the LiquidMetal effect mask.
+- Set `colorBack` to fully transparent (`#a7aab200`) and explicitly keep the shader container/canvas backgrounds transparent.
+- Leave the shader speed, face layers, intro transition timing, Buddy director, and target scale unchanged.
+
+### Validation
+- Confirmed Paper documents `image` as an effect mask requiring a transparent background and `colorBack` as the background color.
+- Production build and visual check at 1024 px still required.

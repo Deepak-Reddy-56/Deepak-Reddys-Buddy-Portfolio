@@ -123,8 +123,8 @@ export function BuddyStage({
           <LiquidMetal
             width={264}
             height={228}
-            image="/buddy-mask.svg"
-            colorBack="#a7aab2"
+            image="/buddy-reference.webp"
+            colorBack="#a7aab200"
             colorTint="#ffffff"
             repetition={2.2}
             softness={0.14}
