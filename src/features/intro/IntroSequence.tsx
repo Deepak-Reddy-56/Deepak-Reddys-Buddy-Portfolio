@@ -6,7 +6,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { soundEngine } from '../../lib/audio/soundEngine';
 import { lerp } from '../../lib/easing';
 import { FrameLoop } from '../../lib/frameLoop';
-import { buddyVoice, SPEECH_RATE } from '../../lib/voice/voice';
+import { buddyVoice, spokenAt } from '../../lib/voice/voice';
 import type { ExpressionName } from '../buddy/expressions';
 import { buddyGeometry } from '../buddy/buddyGeometry';
 import { buddyHost } from '../buddy/buddyHost';
@@ -225,11 +225,11 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     const script = async () => {
       expression = 'greeting';
       await say(lines.hey);
-      await wait(220);
+      await wait(450);
       expression = 'happy';
       await say(lines.selfJoke);
       if (finished.current) return;
-      await wait(300);
+      await wait(600);
       // He turns to Deepak's photo — the profile pops up — then reads the name tag.
       expression = 'curious';
       lookTarget = 'photo';
@@ -237,13 +237,13 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       showProfile(true);
       await wait(500);
       const naming = say(lines.deepak);
-      await wait((lines.deepak.duration / SPEECH_RATE) * 1000 * 0.45);
+      await wait(spokenAt(lines.deepak, 0.5)); // as he reaches "He built me"
       lookTarget = 'tag';
       await naming;
-      await wait(250);
+      await wait(350);
       lookTarget = null;
       expression = 'happy';
-      await wait(200);
+      await wait(400);
       await say(lines.deepakJoke);
       await wait(700);
       finish('done');

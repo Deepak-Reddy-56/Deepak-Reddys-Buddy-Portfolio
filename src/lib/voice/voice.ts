@@ -137,13 +137,108 @@ class SpeechSynthesisVoiceProvider implements VoiceProvider {
  * Buddy's voice service: provider + "say once" guard + a talk envelope the
  * renderers read every frame to move the mouth.
  */
-type ActiveLine = { line: BuddyLine; startedAt: number; audio: HTMLAudioElement | null; finish: () => void };
 
 /**
- * Buddy's speaking pace: playback rate applied to every recorded line (pitch is
- * preserved). Works with whichever audio was generated (Kokoro or Speechify).
+ * Buddy's speaking pace: playback rate for recorded lines (pitch preserved).
+ * Short intro lines keep a lively pace; jokes and the Deepak lines get a touch
+ * slower so they land. Works with whichever audio was generated (Kokoro or Speechify).
  */
 export const SPEECH_RATE = 0.9;
+const JOKE_RATE = 0.86;
+
+/** Extra beats held at punctuation, in ms (the recordings' own pauses are short). */
+const HOLD_MS = { sentence: 380, ellipsis: 460, minor: 170 } as const;
+
+type Pause = { at: number; ms: number };
+type Pacing = { rate: number; pauses: Pause[]; spokenMs: number };
+
+const QUIET = 0.1;
+const FPS = 60;
+
+/**
+ * Where to hold a beat: each punctuation mark's position in the text is mapped
+ * onto the voiced span of the recording, then snapped to the nearest real
+ * silence in the loudness envelope (no silence nearby → no hold).
+ */
+function findPauses(line: BuddyLine): Pause[] {
+  const env = line.envelope;
+  let first = -1;
+  let last = -1;
+  env.forEach((v, i) => {
+    if (v >= QUIET) {
+      if (first < 0) first = i;
+      last = i;
+    }
+  });
+  if (first < 0) return [];
+  const a = first / FPS;
+  const b = last / FPS;
+  const gaps: { t: number; len: number }[] = [];
+  for (let i = 0; i < env.length; ) {
+    if (env[i] < QUIET) {
+      let j = i;
+      while (j < env.length && env[j] < QUIET) j++;
+      if (j - i >= 2 && i / FPS > a && j / FPS < b) gaps.push({ t: (i + j) / 2 / FPS, len: j - i });
+      i = j;
+    } else i++;
+  }
+  const pauses: Pause[] = [];
+  const marks = /([.!?\u2026]+["'\u201d\u2019)]*|[,;:\u2014\u2013])\s+(?=\S)/g;
+  for (let m = marks.exec(line.text); m; m = marks.exec(line.text)) {
+    const est = a + ((m.index + m[0].length) / line.text.length) * (b - a);
+    let best: { t: number; len: number } | null = null;
+    let bestScore = Infinity;
+    for (const g of gaps) {
+      const off = Math.abs(g.t - est);
+      if (off > 0.4) continue;
+      const score = off - g.len * 0.02;
+      if (score < bestScore) {
+        bestScore = score;
+        best = g;
+      }
+    }
+    if (!best || pauses.some((p) => p.at === best.t)) continue;
+    const mark = m[1];
+    const ms = /\.\.\.|\u2026/.test(mark) ? HOLD_MS.ellipsis : /[.!?]/.test(mark) ? HOLD_MS.sentence : HOLD_MS.minor;
+    pauses.push({ at: best.t, ms });
+  }
+  return pauses.sort((x, y) => x.at - y.at);
+}
+
+const pacingCache = new Map<string, Pacing>();
+
+/** Rate, held beats and total spoken length (ms) for a line. */
+export function pacingOf(line: BuddyLine): Pacing {
+  let pacing = pacingCache.get(line.id);
+  if (!pacing) {
+    const rate = line.group === 'intro' ? SPEECH_RATE : JOKE_RATE;
+    const pauses = findPauses(line);
+    const spokenMs = (line.duration / rate) * 1000 + pauses.reduce((sum, p) => sum + p.ms, 0);
+    pacing = { rate, pauses, spokenMs };
+    pacingCache.set(line.id, pacing);
+  }
+  return pacing;
+}
+
+/** Wall-clock ms from the start of a line until `fraction` of its audio has played (holds included). */
+export function spokenAt(line: BuddyLine, fraction: number): number {
+  const { rate, pauses } = pacingOf(line);
+  const t = line.duration * fraction;
+  return (t / rate) * 1000 + pauses.filter((p) => p.at < t).reduce((sum, p) => sum + p.ms, 0);
+}
+
+type ActiveLine = {
+  line: BuddyLine;
+  pacing: Pacing;
+  audio: HTMLAudioElement | null;
+  /** Position in the recording, seconds. */
+  media: number;
+  next: number;
+  holdUntil: number;
+  last: number;
+  raf: number;
+  finish: () => void;
+};
 
 class BuddyVoice {
   private provider: VoiceProvider = new SpeechSynthesisVoiceProvider();
@@ -209,32 +304,73 @@ class BuddyVoice {
     this.stopLine();
     return new Promise((resolve) => {
       let done = false;
+      const pacing = pacingOf(line);
       const finish = () => {
         if (done) return;
         done = true;
         window.clearTimeout(timer);
+        window.cancelAnimationFrame(entry.raf);
         if (this.active?.finish === finish) this.active = null;
         resolve();
       };
       const audio = soundEngine.isEnabled ? (this.clips.get(line.src) ?? new Audio(line.src)) : null;
-      const entry: ActiveLine = { line, startedAt: performance.now(), audio, finish };
+      const entry: ActiveLine = {
+        line,
+        pacing,
+        audio,
+        media: 0,
+        next: 0,
+        holdUntil: 0,
+        last: performance.now(),
+        raf: 0,
+        finish,
+      };
       this.active = entry;
-      // Safety net: never wait longer than the line (plus a little).
-      const timer = window.setTimeout(finish, (line.duration / SPEECH_RATE) * 1000 + 400);
+      // Safety net: never wait much longer than the paced line.
+      const timer = window.setTimeout(finish, pacing.spokenMs + 600);
+
+      // One clock for audio and silent playback: advance through the recording,
+      // holding a beat at each punctuation pause (audio paused, mouth closed).
+      const tick = (now: number) => {
+        if (done) return;
+        const dt = Math.min(0.1, (now - entry.last) / 1000);
+        entry.last = now;
+        if (entry.holdUntil) {
+          if (now >= entry.holdUntil) {
+            entry.holdUntil = 0;
+            if (entry.audio) void entry.audio.play().catch(() => (entry.audio = null));
+          }
+        } else {
+          if (entry.audio && !entry.audio.paused) entry.media = entry.audio.currentTime;
+          else if (!entry.audio) entry.media += dt * pacing.rate;
+          const pause = pacing.pauses[entry.next];
+          if (pause && entry.media >= pause.at) {
+            entry.next += 1;
+            entry.holdUntil = now + pause.ms;
+            entry.audio?.pause();
+          } else if (!entry.audio && entry.media >= line.duration) {
+            finish();
+            return;
+          }
+        }
+        entry.raf = window.requestAnimationFrame(tick);
+      };
+
       if (audio) {
         audio.currentTime = 0;
-        audio.playbackRate = SPEECH_RATE;
+        audio.playbackRate = pacing.rate;
         audio.preservesPitch = true;
         audio.onended = finish;
         audio.play().then(
           () => {
-            entry.startedAt = performance.now();
+            entry.last = performance.now();
           },
           () => {
             entry.audio = null; // autoplay refused: keep the silent timeline
           },
         );
       }
+      entry.raf = window.requestAnimationFrame(tick);
     });
   }
 
@@ -262,9 +398,9 @@ class BuddyVoice {
   talk(now: number): number {
     const active = this.active;
     if (active) {
+      if (active.holdUntil) return 0; // a held beat: mouth closed
       const audio = active.audio;
-      // Media time (already at the speaking pace) when playing; otherwise the line's own clock.
-      const t = audio && !audio.paused ? audio.currentTime : ((now - active.startedAt) / 1000) * SPEECH_RATE;
+      const t = audio && !audio.paused ? audio.currentTime : active.media;
       const env = active.line.envelope;
       const i = Math.floor(t * 60);
       if (i < 0 || i >= env.length) return 0;

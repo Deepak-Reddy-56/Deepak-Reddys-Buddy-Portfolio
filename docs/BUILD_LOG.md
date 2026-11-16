@@ -493,3 +493,10 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - **Mouth:** the smile is now one filled shape whose lower lip opens with the voice envelope (smoothed attack/release), replacing the separate ellipse.
 - **Profile position:** moved lower and slightly inward (`top: clamp(88px, 15vh, 156px)`), photo 60px; tablet and mobile rules updated.
 - QA: reduced motion, no WebGL, context loss/restore, About seat, menu, Strict Mode dev, idle blinks/glances and layout at 1280/820/390 all pass.
+
+## Buddy pacing: jokes and Deepak intro
+
+- Jokes and the Deepak lines play at 0.86× (intro lines stay at 0.9×).
+- Buddy now holds a beat at punctuation: ~380 ms after a sentence, ~460 ms on "...", ~170 ms at a comma or colon. Each mark's position is mapped onto the recording and snapped to a real silence in the envelope; the audio pauses and the mouth closes during the beat. The same clock drives silent (sound-off) playback.
+- Longer gaps between lines (after "Hey, I'm Buddy!", before turning to Deepak, before the Deepak joke). The look at the name tag now lands on the beat before "He built me."
+- Measured: self joke ~3.1 s → ~3.75 s, Deepak joke ~4.2 s → ~5.0 s.
