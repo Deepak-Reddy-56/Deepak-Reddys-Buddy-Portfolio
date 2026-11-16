@@ -50,8 +50,8 @@ export class PaperBuddyView implements BuddyView {
   private readonly body: HTMLDivElement;
   private readonly face: SVGSVGElement;
   private readonly eyes: EyeParts[] = [];
+  /** One mouth path: a smile line when closed, an open smiling mouth when talking. */
   private readonly smile: SVGPathElement;
-  private readonly mouth: SVGEllipseElement;
   private mount: ShaderMount | null = null;
   private maskImage: HTMLImageElement | null = null;
   private maskUrl: string | null = null;
@@ -70,6 +70,8 @@ export class PaperBuddyView implements BuddyView {
   private gazeTarget = { x: 0, y: 0 };
   private blink = 0;
   private talk = 0;
+  /** Smoothed mouth opening (fast to open, a little slower to close — like real speech). */
+  private mouthOpen = 0;
   private faceReveal = 1;
   private form = 1;
   private box: MorphBox | null = null;
@@ -108,14 +110,12 @@ export class PaperBuddyView implements BuddyView {
       this.eyes.push({ group, shine, cx: eye.cx, cy: eye.cy });
     }
     this.smile = el('path') as SVGPathElement;
-    this.smile.setAttribute('fill', 'none');
+    this.smile.setAttribute('fill', '#0c0c0f');
     this.smile.setAttribute('stroke', '#0c0c0f');
+    this.smile.setAttribute('stroke-linejoin', 'round');
     this.smile.setAttribute('stroke-width', String(F.smileWidth));
     this.smile.setAttribute('stroke-linecap', 'round');
-    const [s0, s1, s2] = F.smile;
-    this.mouth = ellipse(s1[0], (s0[1] + s2[1]) / 2 + 3, 15, 4, 0, '#0c0c0f');
-    this.mouth.style.opacity = '0';
-    this.face.append(this.smile, this.mouth);
+    this.face.append(this.smile);
 
     this.ready = new Promise<void>((resolve, reject) => {
       this.resolveReady = resolve;
@@ -280,6 +280,9 @@ export class PaperBuddyView implements BuddyView {
       if (Math.abs(d) > 0.002) changing = true;
       this.expr[key] += d * k;
     }
+    const tau = talk > this.mouthOpen ? 0.035 : 0.075;
+    this.mouthOpen += (talk - this.mouthOpen) * (1 - Math.exp(-dt / tau));
+    if (this.mouthOpen > 0.01 || talk > 0) changing = true;
     const kg = 1 - Math.exp(-dt / 0.09);
     const gx = this.gazeTarget.x - this.gaze.x;
     const gy = this.gazeTarget.y - this.gaze.y;
@@ -350,6 +353,14 @@ export class PaperBuddyView implements BuddyView {
     this.drawFace();
   }
 
+  /** Look (eyes and head) towards a point on screen, e.g. Deepak's photo or name tag. */
+  lookToward(px: number, py: number): void {
+    const dx = px - this.placement.x;
+    const dy = py - this.placement.y;
+    const len = Math.hypot(dx, dy) || 1;
+    this.model.setGaze(dx / len, -dy / len);
+  }
+
   /** Advance face easing (and the speaking mouth) while the intro owns Buddy. */
   tickFace(dt: number, talk = this.talk): void {
     this.update(dt, this.pose, talk);
@@ -368,10 +379,13 @@ export class PaperBuddyView implements BuddyView {
       return;
     }
     const s = size / BODY_BASE_W;
-    const rot = this.pose.bank + this.expr.tilt * 0.6;
-    const tx = x - BASE_W / 2;
-    const ty = y - BASE_H / 2 - this.pose.bob * size * 0.5;
-    this.root.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) rotate(${rot.toFixed(4)}rad) scale(${s.toFixed(4)}, ${(s * this.pose.stretch).toFixed(4)})`;
+    // His head follows his eyes: a slight turn (tilt + narrowing) and a lean towards where he looks.
+    const g = this.gaze;
+    const rot = this.pose.bank + this.expr.tilt * 0.6 + g.x * 0.12 - g.y * g.x * 0.04;
+    const tx = x - BASE_W / 2 + g.x * size * 0.05;
+    const ty = y - BASE_H / 2 - this.pose.bob * size * 0.5 - g.y * size * 0.035;
+    const turn = 1 - Math.abs(g.x) * 0.035;
+    this.root.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) rotate(${rot.toFixed(4)}rad) scale(${(s * turn).toFixed(4)}, ${(s * this.pose.stretch).toFixed(4)})`;
   }
 
   /** Keep the shader's pixel count proportional to Buddy's on-screen size. */
@@ -391,8 +405,8 @@ export class PaperBuddyView implements BuddyView {
     const eyesIn = pop(smooth(0, 0.45, r));
     const shineIn = pop(smooth(0.3, 0.65, r));
     const smileIn = smooth(0.5, 1, r);
-    const gx = this.gaze.x * 9;
-    const gy = -this.gaze.y * 7;
+    const gx = this.gaze.x * 14;
+    const gy = -this.gaze.y * 10;
     const lift = -e.eyeLift * G.height;
     const blink = 1 - 0.93 * this.blink;
 
@@ -411,30 +425,35 @@ export class PaperBuddyView implements BuddyView {
       );
     });
 
-    // Smile: a quadratic curve through the measured points; width/curve follow the expression.
+    // Mouth: a quadratic smile through the measured points (width/curve follow the
+    // expression). Talking opens it into a small smiling mouth: the lower lip drops
+    // with the voice's loudness and the corners draw in slightly.
     const [p0, p1, p2] = F.smile;
-    const mx = (p0[0] + p2[0]) / 2 + gx * 0.3;
-    const chordY = (p0[1] + p2[1]) / 2 + gy * 0.25;
-    const half = ((p2[0] - p0[0]) / 2) * e.mouthWidth;
+    const open = clamp(this.mouthOpen * 1.25, 0, 1) * smileIn;
+    const mx = (p0[0] + p2[0]) / 2 + gx * 0.45;
+    const chordY = (p0[1] + p2[1]) / 2 + gy * 0.35;
+    const half = ((p2[0] - p0[0]) / 2) * e.mouthWidth * (1 - 0.14 * open);
     const tiltY = (p2[1] - p0[1]) / 2;
-    const ctrlY = chordY + (2 * (p1[1] - (p0[1] + p2[1]) / 2)) * e.mouthCurve;
+    const ctrlY = chordY + (2 * (p1[1] - (p0[1] + p2[1]) / 2)) * e.mouthCurve * (1 - 0.35 * open);
     const ctrlX = mx + (p1[0] - (p0[0] + p2[0]) / 2);
+    const lowerY = ctrlY + open * 30;
+    const left = `${(mx - half).toFixed(2)} ${(chordY - tiltY).toFixed(2)}`;
+    const right = `${(mx + half).toFixed(2)} ${(chordY + tiltY).toFixed(2)}`;
     this.smile.setAttribute(
       'd',
-      `M${(mx - half).toFixed(2)} ${(chordY - tiltY).toFixed(2)} Q${ctrlX.toFixed(2)} ${ctrlY.toFixed(2)} ${(mx + half).toFixed(2)} ${(chordY + tiltY).toFixed(2)}`,
+      `M${left} Q${ctrlX.toFixed(2)} ${ctrlY.toFixed(2)} ${right} Q${ctrlX.toFixed(2)} ${lowerY.toFixed(2)} ${left} Z`,
     );
-    const length = half * 2 * 1.12;
-    this.smile.style.strokeDasharray = `${length}`;
-    this.smile.style.strokeDashoffset = `${length * (1 - smileIn)}`;
-
-    // Speech: the smile gives way to a small, rounded open mouth.
-    const talking = clamp(this.talk * 3, 0, 1) * smileIn;
-    this.smile.style.opacity = String(1 - 0.85 * talking);
-    this.mouth.style.opacity = String(talking);
-    this.mouth.setAttribute('cx', mx.toFixed(2));
-    this.mouth.setAttribute('cy', (chordY + 4).toFixed(2));
-    this.mouth.setAttribute('rx', (14 * e.mouthWidth).toFixed(2));
-    this.mouth.setAttribute('ry', (3 + 9 * this.talk).toFixed(2));
+    // Drawn in during the facial reveal; afterwards fully visible.
+    if (smileIn < 1) {
+      const length = this.smile.getTotalLength();
+      this.smile.style.strokeDasharray = `${length / 2} ${length}`;
+      this.smile.style.strokeDashoffset = `${(length / 2) * (1 - smileIn)}`;
+      this.smile.style.fillOpacity = '0';
+    } else {
+      this.smile.style.strokeDasharray = '';
+      this.smile.style.strokeDashoffset = '';
+      this.smile.style.fillOpacity = '1';
+    }
   }
 }
 

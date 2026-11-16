@@ -484,3 +484,12 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 
 ### Validation
 - Typecheck and build pass. Headless Chrome: full intro with pooled jokes, greyed profile popping on cue, navbar/profile/bio/stats without overlap at 1280, 820 and 390 px; reduced motion, no WebGL, context loss/restore, menu and Strict Mode dev unchanged.
+
+## Buddy polish: pace, gaze, mouth, profile spot
+
+- **Speech pace:** voice lines play at 0.9× (`SPEECH_RATE` in `src/lib/voice/voice.ts`, pitch preserved). Captions, mouth envelope and script timing all scale with it.
+- **Looking around:** after the terminal morph Buddy does a ~2.5 s look-around (left, up-right, right, down-left, back) using both eyes and head. The head turns, leans and tilts with gaze in `PaperBuddyView.applyTransform`, and the eye travel is larger. Idle glances in `BuddyDirector` now vary direction and sometimes double-take.
+- **Introducing Deepak:** Buddy looks at the profile photo as it pops in, then at the name tag partway through "This is Deepak…", then back to the visitor (`lookToward` + `data-profile-part` targets).
+- **Mouth:** the smile is now one filled shape whose lower lip opens with the voice envelope (smoothed attack/release), replacing the separate ellipse.
+- **Profile position:** moved lower and slightly inward (`top: clamp(88px, 15vh, 156px)`), photo 60px; tablet and mobile rules updated.
+- QA: reduced motion, no WebGL, context loss/restore, About seat, menu, Strict Mode dev, idle blinks/glances and layout at 1280/820/390 all pass.

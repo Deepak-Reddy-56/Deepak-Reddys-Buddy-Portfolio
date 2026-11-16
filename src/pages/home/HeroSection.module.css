@@ -11,14 +11,15 @@
   padding: 150px 0 120px;
 }
 
-/* ── Profile: photo + tag, top-left (the navbar has the top centre) ── */
+/* ── Profile: photo + tag, upper-left at a comfortable reading height
+   (the navbar has the top centre) ── */
 .profile {
   position: absolute;
-  top: 14px;
-  left: var(--gutter);
+  top: clamp(88px, 15vh, 156px);
+  left: calc(var(--gutter) + clamp(0px, 2vw, 32px));
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   transform-origin: 0 50%;
 }
 
@@ -26,8 +27,8 @@
   display: grid;
   overflow: hidden;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 60px;
+  height: 60px;
   flex: none;
   border-radius: 50%;
   background: var(--color-ink);
@@ -95,7 +96,8 @@
 /* Tablet widths: keep the profile clear of the centred navbar. */
 @media (max-width: 900px) {
   .profile {
-    top: calc(var(--control-top) + var(--control-size) + 20px);
+    top: max(calc(var(--control-top) + var(--control-size) + 28px), 11vh);
+    left: var(--gutter);
   }
 }
 

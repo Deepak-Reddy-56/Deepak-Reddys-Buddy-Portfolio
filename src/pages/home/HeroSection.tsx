@@ -15,10 +15,10 @@ export function HeroSection() {
   return (
     <section id="home" className={styles.hero} aria-labelledby="hero-title">
       <div className={styles.profile}>
-        <span className={styles.photo}>
+        <span className={styles.photo} data-profile-part="photo">
           {profile.photo ? <img src={profile.photo} alt="" /> : <span aria-hidden="true">{site.monogram}</span>}
         </span>
-        <h1 id="hero-title" className={styles.tag}>
+        <h1 id="hero-title" className={styles.tag} data-profile-part="tag">
           <span className={styles.tagLead}>I’m {profile.name}.</span>
           <span className={styles.tagRest}>I’m a {profile.role.toLowerCase()}.</span>
         </h1>

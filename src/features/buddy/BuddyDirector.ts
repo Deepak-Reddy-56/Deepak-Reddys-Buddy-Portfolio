@@ -505,9 +505,14 @@ export class BuddyDirector {
     // Left alone, he looks around now and then.
     if (!this.reducedMotion) {
       if (this.time >= this.nextGlanceAt) {
-        const side = Math.random() < 0.5 ? -1 : 1;
-        this.glance = { x: side * (0.55 + Math.random() * 0.4), y: (Math.random() - 0.35) * 0.5, until: this.time + 0.7 + Math.random() * 0.6 };
-        this.nextGlanceAt = this.time + 3.5 + Math.random() * 4;
+        // Eyes and head together (the view turns his head with his gaze): a look to one
+        // side, up or down, held for a moment — sometimes a quick double-take the other way.
+        const side = this.glance.x > 0 ? -1 : 1;
+        const doubleTake = this.time - this.glance.until < 0.25 && Math.random() < 0.6;
+        const x = side * (0.6 + Math.random() * 0.4);
+        const y = (Math.random() - 0.4) * 1.1;
+        this.glance = { x, y, until: this.time + (doubleTake ? 0.45 : 0.6 + Math.random() * 0.7) };
+        this.nextGlanceAt = Math.random() < 0.35 ? this.glance.until + 0.05 : this.glance.until + 2 + Math.random() * 2.8;
       }
       if (this.time < this.glance.until) {
         this.view.model.setGaze(this.glance.x, this.glance.y);

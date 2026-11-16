@@ -139,6 +139,12 @@ class SpeechSynthesisVoiceProvider implements VoiceProvider {
  */
 type ActiveLine = { line: BuddyLine; startedAt: number; audio: HTMLAudioElement | null; finish: () => void };
 
+/**
+ * Buddy's speaking pace: playback rate applied to every recorded line (pitch is
+ * preserved). Works with whichever audio was generated (Kokoro or Speechify).
+ */
+export const SPEECH_RATE = 0.9;
+
 class BuddyVoice {
   private provider: VoiceProvider = new SpeechSynthesisVoiceProvider();
   private active: ActiveLine | null = null;
@@ -214,9 +220,11 @@ class BuddyVoice {
       const entry: ActiveLine = { line, startedAt: performance.now(), audio, finish };
       this.active = entry;
       // Safety net: never wait longer than the line (plus a little).
-      const timer = window.setTimeout(finish, line.duration * 1000 + 400);
+      const timer = window.setTimeout(finish, (line.duration / SPEECH_RATE) * 1000 + 400);
       if (audio) {
         audio.currentTime = 0;
+        audio.playbackRate = SPEECH_RATE;
+        audio.preservesPitch = true;
         audio.onended = finish;
         audio.play().then(
           () => {
@@ -255,7 +263,8 @@ class BuddyVoice {
     const active = this.active;
     if (active) {
       const audio = active.audio;
-      const t = audio && !audio.paused ? audio.currentTime : (now - active.startedAt) / 1000;
+      // Media time (already at the speaking pace) when playing; otherwise the line's own clock.
+      const t = audio && !audio.paused ? audio.currentTime : ((now - active.startedAt) / 1000) * SPEECH_RATE;
       const env = active.line.envelope;
       const i = Math.floor(t * 60);
       if (i < 0 || i >= env.length) return 0;

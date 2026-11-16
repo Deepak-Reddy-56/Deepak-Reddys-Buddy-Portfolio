@@ -6,7 +6,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { soundEngine } from '../../lib/audio/soundEngine';
 import { lerp } from '../../lib/easing';
 import { FrameLoop } from '../../lib/frameLoop';
-import { buddyVoice } from '../../lib/voice/voice';
+import { buddyVoice, SPEECH_RATE } from '../../lib/voice/voice';
 import type { ExpressionName } from '../buddy/expressions';
 import { buddyGeometry } from '../buddy/buddyGeometry';
 import { buddyHost } from '../buddy/buddyHost';
@@ -29,6 +29,8 @@ type IntroSequenceProps = {
 };
 
 const TERMINAL_RADIUS = 46;
+/** Deepak's profile parts Buddy looks at while introducing him. */
+const PROFILE_PARTS = { photo: '[data-profile-part="photo"]', tag: '[data-profile-part="tag"]' } as const;
 const HERO_SEAT = '[data-buddy-seat="hero"]';
 const HERO_SLOT = HERO_SEAT + ' [data-buddy-slot]';
 /** Buddy's canvas is the padded mask; his body is this fraction of its width. */
@@ -196,7 +198,8 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     let swappedAt: number | null = null;
     let scriptStarted = false;
     let expression: ExpressionName = 'idle';
-    let gaze: { x: number; y: number } | null = null;
+    /** What he looks at while talking: the visitor (null), or Deepak's photo / name tag. */
+    let lookTarget: 'photo' | 'tag' | null = null;
     const fired = new Set<string>();
     const once = (key: string, condition: boolean, action: () => void) => {
       if (condition && !fired.has(key)) {
@@ -227,13 +230,18 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       await say(lines.selfJoke);
       if (finished.current) return;
       await wait(300);
+      // He turns to Deepak's photo — the profile pops up — then reads the name tag.
       expression = 'curious';
-      gaze = { x: -0.85, y: 0.7 }; // he turns to Deepak's profile (top-left)
-      await wait(250);
+      lookTarget = 'photo';
+      await wait(350);
       showProfile(true);
-      await wait(450);
-      await say(lines.deepak);
-      gaze = null;
+      await wait(500);
+      const naming = say(lines.deepak);
+      await wait((lines.deepak.duration / SPEECH_RATE) * 1000 * 0.45);
+      lookTarget = 'tag';
+      await naming;
+      await wait(250);
+      lookTarget = null;
       expression = 'happy';
       await wait(200);
       await say(lines.deepakJoke);
@@ -330,7 +338,13 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
           void script();
         });
         view.model.setExpression(expression);
-        view.lookAt(gaze?.x ?? 0, gaze?.y ?? 0);
+        const target = lookTarget ? document.querySelector<HTMLElement>(PROFILE_PARTS[lookTarget]) : null;
+        if (target) {
+          const t = target.getBoundingClientRect();
+          view.lookToward(t.left + t.width / 2, t.top + t.height / 2);
+        } else {
+          view.lookAt(0, 0);
+        }
         view.model.setBlink(0);
       }
       view.tickFace(dt, talk);
