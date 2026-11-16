@@ -19,12 +19,14 @@ Two voices, same output:
       # model files from https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0
       python scripts/generate-buddy-voice.py --provider kokoro --models <folder with kokoro-v1.0.onnx + voices-v1.0.bin>
 
-Requires ffmpeg on PATH. Only the listed --only ids are regenerated if given.
+Needs ffmpeg: either on PATH, or simply `pip install imageio-ffmpeg` (bundles it; used automatically).
+Only the listed --only ids are regenerated if given.
 """
 import argparse
 import base64
 import json
 import os
+import shutil
 import subprocess
 import sys
 import urllib.request
@@ -48,8 +50,22 @@ parser.add_argument('--only', nargs='*', default=None, help='regenerate only the
 args = parser.parse_args()
 
 
+def find_ffmpeg() -> str:
+    found = shutil.which('ffmpeg')
+    if found:
+        return found
+    try:
+        import imageio_ffmpeg  # pip install imageio-ffmpeg (ships an ffmpeg binary)
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except ImportError:
+        sys.exit('ffmpeg not found. Run:  pip install imageio-ffmpeg   (or install ffmpeg and add it to PATH)')
+
+
+FFMPEG = find_ffmpeg()
+
+
 def decode_to_pcm(mp3: Path) -> np.ndarray:
-    raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', str(mp3), '-f', 's16le', '-ac', '1', '-ar', str(SR), '-'],
+    raw = subprocess.run([FFMPEG, '-loglevel', 'error', '-i', str(mp3), '-f', 's16le', '-ac', '1', '-ar', str(SR), '-'],
                          check=True, capture_output=True).stdout
     return np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
 
@@ -82,7 +98,7 @@ def speak_kokoro(text: str, out: Path) -> None:
     audio, sr = kokoro.create(text, voice=args.voice or 'am_puck', speed=args.rate, lang='en-us')
     wav = out.with_suffix('.wav')
     sf.write(wav, np.asarray(audio, dtype=np.float32), sr)
-    subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', str(wav), '-ac', '1', '-b:a', '64k', str(out)], check=True)
+    subprocess.run([FFMPEG, '-loglevel', 'error', '-y', '-i', str(wav), '-ac', '1', '-b:a', '64k', str(out)], check=True)
     wav.unlink()
 
 
@@ -94,7 +110,7 @@ def trim(mp3: Path) -> np.ndarray:
     end = min(len(pcm), voiced[-1] + int(0.12 * SR))
     trimmed = pcm[start:end]
     tmp = mp3.with_suffix('.trim.mp3')
-    subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-f', 's16le', '-ar', str(SR), '-ac', '1', '-i', '-', '-b:a', '64k', str(tmp)],
+    subprocess.run([FFMPEG, '-loglevel', 'error', '-y', '-f', 's16le', '-ar', str(SR), '-ac', '1', '-i', '-', '-b:a', '64k', str(tmp)],
                    input=(trimmed * 32767).astype(np.int16).tobytes(), check=True)
     tmp.replace(mp3)
     return trimmed
