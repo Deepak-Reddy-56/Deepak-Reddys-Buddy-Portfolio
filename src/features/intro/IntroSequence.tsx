@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { BuddyLine } from '../../content/buddyLines';
+import { quips } from '../../content/buddyQuips';
 import { seatExpressions } from '../../content/dialogue';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
@@ -10,7 +11,8 @@ import { buddyVoice, spokenAt } from '../../lib/voice/voice';
 import type { ExpressionName } from '../buddy/expressions';
 import { buddyGeometry } from '../buddy/buddyGeometry';
 import { buddyHost } from '../buddy/buddyHost';
-import { line as buddyLine, pickLine } from '../buddy/buddyScript';
+import { buddyQuip } from '../buddy/buddyQuip';
+import { line as buddyLine, pickLine, quipLine } from '../buddy/buddyScript';
 import { buddySpeech } from '../buddy/buddySpeech';
 import type { MorphBox, PaperBuddyView } from '../buddy/PaperBuddyView';
 import { IntroControls } from './IntroControls';
@@ -294,9 +296,14 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       showDetails(true);
       flight = { at: performance.now(), from, to };
       await wait(FLY_MS);
-      activateHeroLine(); // his resting line writes itself in beside him
+      // Settled in his corner, he says his line there (it darkens word by word as he speaks).
+      activateHeroLine();
       expression = 'happy';
-      await wait(700);
+      await wait(250);
+      if (finished.current) return;
+      buddyQuip.say('hero', quips.settle.caption);
+      await buddyVoice.playLine(quipLine(quips.settle));
+      await wait(500);
       finish('done');
     };
 
@@ -417,7 +424,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     if (current !== 'typing' && current !== 'ready') return;
     soundEngine.unlock();
     buddyVoice.prime();
-    buddyVoice.preload(Object.values(lines));
+    buddyVoice.preload([...Object.values(lines), quipLine(quips.settle)]);
     soundEngine.play('enter');
     setTyped(COMMAND.length);
     // Reduced motion: no morph — Buddy is simply in his seat, beside the profile.

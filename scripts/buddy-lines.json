@@ -24,5 +24,6 @@
   "costume-hardhat": { "group": "quip", "text": "Hard hat. He builds things. I mostly supervise.", "caption": { "lead": "Hard hat.", "rest": "He builds things. I mostly supervise." } },
   "costume-none": { "group": "quip", "text": "Naked again. Don't look. It's all head, all the way down.", "caption": { "lead": "Naked again.", "rest": "Don’t look. It’s all head, all the way down." } },
   "back": { "group": "quip", "text": "Oh! You're back! I wasn't asleep. I was resting my chrome.", "caption": { "lead": "Oh! You’re back!", "rest": "I wasn’t asleep. I was resting my chrome." } },
-  "ahem": { "group": "quip", "text": "Ahem. The page keeps going. I checked. Twice.", "caption": { "lead": "Ahem.", "rest": "The page keeps going. I checked. Twice." } }
+  "ahem": { "group": "quip", "text": "Ahem. The page keeps going. I checked. Twice.", "caption": { "lead": "Ahem.", "rest": "The page keeps going. I checked. Twice." } },
+  "settle": { "group": "quip", "text": "He built me with React, TypeScript and a little bit of love. Mostly the first two.", "caption": { "lead": "He built me with React, TypeScript", "rest": "and a little bit of love. Mostly the first two." } }
 }

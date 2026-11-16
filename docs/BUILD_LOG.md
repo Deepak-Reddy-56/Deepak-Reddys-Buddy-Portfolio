@@ -543,3 +543,7 @@ Reference: the owner's recording of adamperlis.com (clicking Buddy).
 - `--preview [id|text] --voices … --rates …` auditions one line in several voices and rates into `voice-previews/` (gitignored), with a wpm readout. Site files are untouched.
 - `--list-voices` (Speechify) lists the available English voices.
 - Kokoro test: lines land at 144–164 wpm with rates of 0.62–0.91.
+
+## Buddy says his corner line after landing
+
+- At the end of the intro, once he has settled top-right, Buddy speaks "He built me with React, TypeScript and a little bit of love. Mostly the first two." The words darken as he says them and his mouth moves; the intro ends after the line. New line id `settle` in `buddyQuips.ts` and `scripts/buddy-lines.json`. It plays the recording if one has been generated, otherwise the silent synthetic timeline.

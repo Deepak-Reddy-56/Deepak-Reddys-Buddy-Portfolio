@@ -17,4 +17,6 @@ export const quips = {
   none: q('costume-none', "Naked again. Don't look. It's all head, all the way down.", 'Naked again.', 'Don’t look. It’s all head, all the way down.'),
   back: q('back', "Oh! You're back! I wasn't asleep. I was resting my chrome.", 'Oh! You’re back!', 'I wasn’t asleep. I was resting my chrome.'),
   ahem: q('ahem', 'Ahem. The page keeps going. I checked. Twice.', 'Ahem.', 'The page keeps going. I checked. Twice.'),
+  /** Said once he has settled in his corner at the end of the intro (same words as his resting line there). */
+  settle: q('settle', 'He built me with React, TypeScript and a little bit of love. Mostly the first two.', 'He built me with React, TypeScript', 'and a little bit of love. Mostly the first two.'),
 } satisfies Record<string, Quip>;
