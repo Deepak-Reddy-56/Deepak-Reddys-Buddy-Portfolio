@@ -139,15 +139,15 @@ class SpeechSynthesisVoiceProvider implements VoiceProvider {
  */
 
 /**
- * Buddy's speaking pace: playback rate for recorded lines (pitch preserved).
- * Short intro lines keep a lively pace; jokes and the Deepak lines get a touch
- * slower so they land. Works with whichever audio was generated (Kokoro or Speechify).
+ * Playback rate for recorded lines. Kept at 1: slowing audio in the browser
+ * time-stretches it and makes the voice sound robotic. Pace is set where the
+ * lines are generated (scripts/generate-buddy-voice.py --rate / --joke-rate).
  */
-export const SPEECH_RATE = 0.9;
-const JOKE_RATE = 0.65;
+export const SPEECH_RATE = 1;
+const JOKE_RATE = 1;
 
 /** Extra beats held at punctuation, in ms (the recordings' own pauses are short). */
-const HOLD_MS = { sentence: 380, ellipsis: 460, minor: 170 } as const;
+const HOLD_MS = { sentence: 160, ellipsis: 240, minor: 0 } as const;
 
 type Pause = { at: number; ms: number };
 type Pacing = { rate: number; pauses: Pause[]; spokenMs: number };
@@ -200,7 +200,7 @@ function findPauses(line: BuddyLine): Pause[] {
     if (!best || pauses.some((p) => p.at === best.t)) continue;
     const mark = m[1];
     const ms = /\.\.\.|\u2026/.test(mark) ? HOLD_MS.ellipsis : /[.!?]/.test(mark) ? HOLD_MS.sentence : HOLD_MS.minor;
-    pauses.push({ at: best.t, ms });
+    if (ms > 0) pauses.push({ at: best.t, ms });
   }
   return pauses.sort((x, y) => x.at - y.at);
 }

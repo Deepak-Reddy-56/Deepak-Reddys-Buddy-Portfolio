@@ -12,7 +12,11 @@ Two voices, same output:
       set SPEECHIFY_API_KEY=sk_...            (PowerShell: $env:SPEECHIFY_API_KEY="sk_...")
       python scripts/generate-buddy-voice.py --provider speechify --voice <voice_id>
       # list voices: curl -H "Authorization: Bearer %SPEECHIFY_API_KEY%" https://api.speechify.ai/v1/voices
-      # Adam's notes: a flat, deadpan take, spoken "a bit faster" -> try --rate 1.1
+      # Pace is set here, at the source (the site plays recordings at 1x — slowing
+      # audio in the browser stretches it and makes the voice sound robotic):
+      #   --rate        intro lines ("Hey, I'm Buddy!")      default 1.0
+      #   --joke-rate   jokes, Deepak lines, quips          default 0.88
+      # Real pauses (SSML <break>) are put after sentences and commas.
 
   Kokoro (open source, Apache-2.0, offline; the default):
       pip install kokoro-onnx soundfile numpy
@@ -43,7 +47,9 @@ SR = 24000
 parser = argparse.ArgumentParser()
 parser.add_argument('--provider', choices=['kokoro', 'speechify'], default='kokoro')
 parser.add_argument('--voice', default=None, help='kokoro: am_puck (default); speechify: a voice_id from /v1/voices')
-parser.add_argument('--rate', type=float, default=1.1, help='speaking rate (Adam: "a bit faster")')
+parser.add_argument('--rate', type=float, default=1.0, help='speaking rate for the intro lines')
+parser.add_argument('--joke-rate', type=float, default=0.88, help='speaking rate for jokes, Deepak lines and quips')
+parser.add_argument('--pause', type=int, default=320, help='ms of silence after a sentence (commas get a third)')
 parser.add_argument('--model', default='simba-3.5', help='speechify model id')
 parser.add_argument('--models', default=str(Path(__file__).resolve().parent), help='kokoro model folder')
 parser.add_argument('--only', nargs='*', default=None, help='regenerate only these line ids')
@@ -70,13 +76,29 @@ def decode_to_pcm(mp3: Path) -> np.ndarray:
     return np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
 
 
-def speak_speechify(text: str, out: Path) -> None:
+def rate_for(group: str) -> float:
+    return args.rate if group == 'intro' else args.joke_rate
+
+
+def ssml_body(text: str) -> str:
+    """Escape for SSML and add real pauses after sentences (and short ones after commas)."""
+    import re
+    # Mark pauses on the raw text first (so escapes like &amp; aren't mistaken for punctuation).
+    marked = re.sub(r'([.!?\u2026]+)\s+', '\\1 \x01 ', text)
+    marked = re.sub(r'([,;:])\s+', '\\1 \x02 ', marked)
+    escaped = (marked.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+               .replace('"', '&quot;').replace("'", '&apos;'))
+    escaped = escaped.replace('\x01', f'<break time="{args.pause}ms"/>').replace('\x02', f'<break time="{args.pause // 3}ms"/>')
+    return escaped
+
+
+def speak_speechify(text: str, out: Path, group: str) -> None:
     key = os.environ.get('SPEECHIFY_API_KEY')
     if not key:
         sys.exit('Set SPEECHIFY_API_KEY first.')
     if not args.voice:
         sys.exit('Pass --voice <voice_id> (list them via GET https://api.speechify.ai/v1/voices).')
-    ssml = f'<speak><prosody rate="{round(args.rate * 100)}%">{text}</prosody></speak>'
+    ssml = f'<speak><prosody rate="{round(rate_for(group) * 100)}%">{ssml_body(text)}</prosody></speak>'
     body = json.dumps({'input': ssml, 'voice_id': args.voice, 'model': args.model, 'audio_format': 'mp3'}).encode()
     request = urllib.request.Request('https://api.speechify.ai/v1/audio/speech', data=body, method='POST',
                                      headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'})
@@ -88,14 +110,14 @@ def speak_speechify(text: str, out: Path) -> None:
 kokoro = None
 
 
-def speak_kokoro(text: str, out: Path) -> None:
+def speak_kokoro(text: str, out: Path, group: str) -> None:
     global kokoro
     import soundfile as sf
     from kokoro_onnx import Kokoro
     if kokoro is None:
         models = Path(args.models)
         kokoro = Kokoro(str(models / 'kokoro-v1.0.onnx'), str(models / 'voices-v1.0.bin'))
-    audio, sr = kokoro.create(text, voice=args.voice or 'am_puck', speed=args.rate, lang='en-us')
+    audio, sr = kokoro.create(text, voice=args.voice or 'am_puck', speed=rate_for(group), lang='en-us')
     wav = out.with_suffix('.wav')
     sf.write(wav, np.asarray(audio, dtype=np.float32), sr)
     subprocess.run([FFMPEG, '-loglevel', 'error', '-y', '-i', str(wav), '-ac', '1', '-b:a', '64k', str(out)], check=True)
@@ -121,7 +143,7 @@ for key, line in LINES.items():
     mp3 = OUT / f'{key}.mp3'
     if args.only and key not in args.only and mp3.exists():
         continue
-    (speak_speechify if args.provider == 'speechify' else speak_kokoro)(line['text'], mp3)
+    (speak_speechify if args.provider == 'speechify' else speak_kokoro)(line['text'], mp3, line['group'])
     trim(mp3)
     print(key, 'ok')
 

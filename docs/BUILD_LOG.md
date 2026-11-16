@@ -520,3 +520,13 @@ Reference: the owner's recording of adamperlis.com (clicking Buddy).
 - **"Oh! You're back!":** after the tab or window has been away for 20 s or more, his eyes are shut when you return; after a beat they open and he denies napping.
 - **"Ahem. The page keeps going.":** once per visit, after a minute on the home screen (the clock starts when the intro ends or when he arrives at the hero).
 - Lines live in `src/content/buddyQuips.ts` and in `scripts/buddy-lines.json` (group `quip`), so recordings can be generated. Until a recording exists, a line runs on a silent synthetic timeline: the mouth moves and the karaoke caption darkens in step, with no sound. A line replaces the seat's resting line until he leaves that seat.
+
+## Hard hat redesign; clean voice (no browser time-stretch)
+
+- **Hard hat:** rebuilt as a glossy construction helmet: a rounded dome sitting down on the head, a centre rib with a knob, a gloss highlight, and a thick brim that wraps round the head and dips at the front. Hats now ride with the head like a point on the forehead: a damped sideways shift, and full rise and fall with his gaze. Looking up, the brim rises at least as far as his eyes, so it never slides over them.
+- **Voice:** the robotic sound came from slowing recordings in the browser (`playbackRate` 0.65 with pitch preserved time-stretches the audio). Playback is now 1× for every line, and pace is set where the lines are generated:
+  - `--rate`: intro lines, default 1.0.
+  - `--joke-rate`: jokes, Deepak lines and quips, default 0.88.
+  - Real SSML pauses (`<break>`) go after sentences (`--pause`, default 320 ms), with a third of that after commas.
+  - Text is escaped for SSML.
+  - In-browser beats are reduced to small top-ups (160 ms at sentence ends, 240 ms at "...", none at commas).

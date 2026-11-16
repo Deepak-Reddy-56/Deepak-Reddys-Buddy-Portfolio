@@ -681,9 +681,15 @@ export class PaperBuddyView implements BuddyView {
     if (!parts) return;
     const k = this.accessoryIn;
     const popIn = pop(k);
-    // Pieces on top of the head: the crown barely moves as he turns; they lean a little with him.
-    const topShift = Math.sin(yaw) * HEAD.rx * 0.16;
-    const topLift = -Math.sin(pitch) * HEAD.ry * 0.1;
+    // Pieces on top of the head ride with it exactly like a point painted high on his
+    // forehead, so a hat brim keeps its place above his eyes however he turns.
+    const crownY = HEAD.cy - HEAD.ry * 0.72;
+    const crown = projectOnHead(HEAD.cx, crownY, yaw, pitch);
+    // (The hat stays over the dome of his head sideways; it rises and dips fully with his gaze.)
+    const topShift = (crown.x - HEAD.cx) * 0.35;
+    // Looking up, the brim rises at least as far as his eyes do, so it never slides over them.
+    const eyeRise = projectOnHead(HEAD.cx, HEAD.cy, yaw, pitch).y - HEAD.cy;
+    const topLift = Math.min((crown.y - crownY) * 0.85, eyeRise);
     const tilt = (Math.sin(yaw) * 9 - 6 * (this.accessory === 'tie' ? 1 : 0)).toFixed(2);
     parts.top.setAttribute(
       'transform',
