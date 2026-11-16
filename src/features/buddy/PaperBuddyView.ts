@@ -13,6 +13,55 @@ const BASE_H = (BASE_W * G.height) / G.width;
 const BODY_BASE_W = (BASE_W * G.body.width) / G.width;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+/**
+ * Buddy's head is treated as a sphere (squashed to the body's ellipse): the face
+ * is painted on it, so turning his head slides the eyes and mouth across the
+ * body and foreshortens them near the edge — the face can turn right round.
+ */
+const HEAD = {
+  cx: G.body.x + G.body.width / 2,
+  cy: G.body.y + G.body.height / 2,
+  rx: G.body.width / 2,
+  ry: G.body.height / 2,
+};
+/** Gaze (-1..1) → head angles (radians). */
+const YAW_RANGE = 1.0;
+const PITCH_RANGE = 0.62;
+/** Head spring: a touch under-damped, so a quick look settles with a tiny overshoot. */
+const HEAD_K = 70;
+const HEAD_DAMP = 0.68;
+
+type Spring = { x: number; v: number };
+function stepSpring(sp: Spring, target: number, dt: number): void {
+  const c = 2 * Math.sqrt(HEAD_K) * HEAD_DAMP;
+  let left = Math.min(dt, 0.1);
+  while (left > 0) {
+    const h = Math.min(left, 1 / 120);
+    sp.v += (HEAD_K * (target - sp.x) - c * sp.v) * h;
+    sp.x += sp.v * h;
+    left -= h;
+  }
+}
+
+/** A point painted on the head at rest, turned by (yaw, pitch): screen position, foreshortening, facing. */
+function projectOnHead(px: number, py: number, yaw: number, pitch: number) {
+  const nx = clamp((px - HEAD.cx) / HEAD.rx, -0.95, 0.95);
+  const ny = clamp((py - HEAD.cy) / HEAD.ry, -0.95, 0.95);
+  const nz = Math.sqrt(Math.max(0.05, 1 - nx * nx - ny * ny));
+  const cy = Math.cos(yaw);
+  const sy = Math.sin(yaw);
+  const x1 = nx * cy + nz * sy;
+  const z1 = -nx * sy + nz * cy;
+  const cp = Math.cos(pitch);
+  const sp = Math.sin(pitch);
+  // Positive pitch looks up: the face moves up the head.
+  const y2 = ny * cp - z1 * sp;
+  const z2 = ny * sp + z1 * cp;
+  const fx = Math.sqrt(Math.max(0, 1 - x1 * x1)) / Math.sqrt(1 - nx * nx);
+  const fy = Math.sqrt(Math.max(0, 1 - y2 * y2)) / Math.sqrt(1 - ny * ny);
+  return { x: HEAD.cx + x1 * HEAD.rx, y: HEAD.cy + y2 * HEAD.ry, fx: clamp(fx, 0, 1.2), fy: clamp(fy, 0, 1.2), z: z2 };
+}
+
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const smooth = (a: number, b: number, x: number) => {
   const t = clamp((x - a) / (b - a), 0, 1);
@@ -68,6 +117,13 @@ export class PaperBuddyView implements BuddyView {
   private exprTarget: ExpressionParams = { ...expressions.idle };
   private gaze = { x: 0, y: 0 };
   private gazeTarget = { x: 0, y: 0 };
+  /** Head angles (radians), sprung towards the gaze; the eyes lead, the head follows. */
+  private yaw: Spring = { x: 0, v: 0 };
+  private pitch: Spring = { x: 0, v: 0 };
+  /** Extra turn (radians) on top of the gaze, e.g. turning away as he flies off. */
+  private spin = 0;
+  private lastAngle: number = M.angle;
+  private faceGroup!: SVGGElement;
   private blink = 0;
   private talk = 0;
   /** Smoothed mouth opening (fast to open, a little slower to close — like real speech). */
@@ -96,6 +152,16 @@ export class PaperBuddyView implements BuddyView {
     this.face.setAttribute('aria-hidden', 'true');
     this.breath.append(this.body, this.face);
     root.append(this.breath);
+    // The face is clipped to the head, so features slide out of sight round the side.
+    const defs = el('defs');
+    const clip = el('clipPath');
+    const clipId = 'buddy-head-' + Math.random().toString(36).slice(2, 8);
+    clip.setAttribute('id', clipId);
+    clip.append(ellipse(HEAD.cx, HEAD.cy, HEAD.rx * 0.985, HEAD.ry * 0.985, 0, '#000'));
+    defs.append(clip);
+    this.faceGroup = el('g');
+    this.faceGroup.setAttribute('clip-path', `url(#${clipId})`);
+    this.face.append(defs, this.faceGroup);
 
     // Eyes: black ellipses with a white highlight and a tiny glint (from the approved design).
     for (const eye of F.eyes) {
@@ -106,7 +172,7 @@ export class PaperBuddyView implements BuddyView {
       const g = eye.glint;
       shine.append(ellipse(h.cx, h.cy, h.rx, h.ry, h.rotate, '#ffffff'), ellipse(g.cx, g.cy, g.rx, g.ry, g.rotate, '#ffffff'));
       group.append(shine);
-      this.face.append(group);
+      this.faceGroup.append(group);
       this.eyes.push({ group, shine, cx: eye.cx, cy: eye.cy });
     }
     this.smile = el('path') as SVGPathElement;
@@ -115,7 +181,7 @@ export class PaperBuddyView implements BuddyView {
     this.smile.setAttribute('stroke-linejoin', 'round');
     this.smile.setAttribute('stroke-width', String(F.smileWidth));
     this.smile.setAttribute('stroke-linecap', 'round');
-    this.face.append(this.smile);
+    this.faceGroup.append(this.smile);
 
     this.ready = new Promise<void>((resolve, reject) => {
       this.resolveReady = resolve;
@@ -289,9 +355,32 @@ export class PaperBuddyView implements BuddyView {
     if (Math.abs(gx) + Math.abs(gy) > 0.004) changing = true;
     this.gaze.x += gx * kg;
     this.gaze.y += gy * kg;
+    if (this.stepHead(dt)) changing = true;
     this.drawFace();
     this.applyTransform();
     return changing;
+  }
+
+  /** Advance the head springs; true while the head is still moving. */
+  private stepHead(dt: number): boolean {
+    const yawTarget = this.gazeTarget.x * YAW_RANGE + this.spin;
+    const pitchTarget = this.gazeTarget.y * PITCH_RANGE;
+    if (this.reducedMotion) {
+      this.yaw = { x: yawTarget, v: 0 };
+      this.pitch = { x: pitchTarget, v: 0 };
+      return false;
+    }
+    stepSpring(this.yaw, yawTarget, dt);
+    stepSpring(this.pitch, pitchTarget, dt);
+    return (
+      Math.abs(this.yaw.v) + Math.abs(this.pitch.v) > 0.002 ||
+      Math.abs(yawTarget - this.yaw.x) + Math.abs(pitchTarget - this.pitch.x) > 0.002
+    );
+  }
+
+  /** Turn his head by an extra amount (radians), e.g. away from the visitor as he flies off. */
+  setSpin(radians: number): void {
+    this.spin = radians;
   }
 
   render(): void {
@@ -349,7 +438,11 @@ export class PaperBuddyView implements BuddyView {
   /** Gaze set directly (intro look-around), skipping the director's easing. */
   lookAt(x: number, y: number, immediate = false): void {
     this.model.setGaze(x, y);
-    if (immediate) this.gaze = { ...this.gazeTarget };
+    if (immediate) {
+      this.gaze = { ...this.gazeTarget };
+      this.yaw = { x: this.gazeTarget.x * YAW_RANGE + this.spin, v: 0 };
+      this.pitch = { x: this.gazeTarget.y * PITCH_RANGE, v: 0 };
+    }
     this.drawFace();
   }
 
@@ -358,7 +451,8 @@ export class PaperBuddyView implements BuddyView {
     const dx = px - this.placement.x;
     const dy = py - this.placement.y;
     const len = Math.hypot(dx, dy) || 1;
-    this.model.setGaze(dx / len, -dy / len);
+    // Turn right round towards it (not just a glance).
+    this.model.setGaze((dx / len) * 1.05, (-dy / len) * 0.95);
   }
 
   /** Advance face easing (and the speaking mouth) while the intro owns Buddy. */
@@ -379,13 +473,18 @@ export class PaperBuddyView implements BuddyView {
       return;
     }
     const s = size / BODY_BASE_W;
-    // His head follows his eyes: a slight turn (tilt + narrowing) and a lean towards where he looks.
-    const g = this.gaze;
-    const rot = this.pose.bank + this.expr.tilt * 0.6 + g.x * 0.12 - g.y * g.x * 0.04;
-    const tx = x - BASE_W / 2 + g.x * size * 0.05;
-    const ty = y - BASE_H / 2 - this.pose.bob * size * 0.5 - g.y * size * 0.035;
-    const turn = 1 - Math.abs(g.x) * 0.035;
-    this.root.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) rotate(${rot.toFixed(4)}rad) scale(${(s * turn).toFixed(4)}, ${(s * this.pose.stretch).toFixed(4)})`;
+    // The head turn is drawn on the face (see drawFace); the body only leans a little into it.
+    const yaw = this.yaw.x - this.spin;
+    const rot = this.pose.bank + this.expr.tilt * 0.6 + clamp(yaw, -1, 1) * 0.06;
+    const tx = x - BASE_W / 2 + clamp(yaw, -1, 1) * size * 0.025;
+    const ty = y - BASE_H / 2 - this.pose.bob * size * 0.5 - this.pitch.x * size * 0.03;
+    this.root.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) rotate(${rot.toFixed(4)}rad) scale(${s.toFixed(4)}, ${(s * this.pose.stretch).toFixed(4)})`;
+    // Reflections swing with the head, so the chrome reads as a turning ball.
+    const angle = M.angle + ((this.yaw.x * 180) / Math.PI) * 0.35;
+    if (this.mount && Math.abs(angle - this.lastAngle) > 0.15) {
+      this.lastAngle = angle;
+      this.mount.setUniforms({ u_angle: angle });
+    }
   }
 
   /** Keep the shader's pixel count proportional to Buddy's on-screen size. */
@@ -405,44 +504,73 @@ export class PaperBuddyView implements BuddyView {
     const eyesIn = pop(smooth(0, 0.45, r));
     const shineIn = pop(smooth(0.3, 0.65, r));
     const smileIn = smooth(0.5, 1, r);
-    const gx = this.gaze.x * 14;
-    const gy = -this.gaze.y * 10;
+    // He wakes up: the eyes appear closed and open as the reveal completes.
+    const asleep = 1 - smooth(0.55, 0.9, r);
+    const blink = 1 - 0.93 * Math.max(this.blink, asleep);
     const lift = -e.eyeLift * G.height;
-    const blink = 1 - 0.93 * this.blink;
+    const yaw = this.yaw.x;
+    const pitch = this.pitch.x;
+    // The eyes lead the head a little (they get there first; the head catches up).
+    const leadX = clamp(this.gaze.x * YAW_RANGE + this.spin - yaw, -0.5, 0.5) * 18;
+    const leadY = -clamp(this.gaze.y * PITCH_RANGE - pitch, -0.4, 0.4) * 14;
+    const fade = (z: number) => smooth(-0.05, 0.3, z);
 
     this.eyes.forEach((eye, i) => {
+      const p = projectOnHead(eye.cx, eye.cy, yaw, pitch);
       const scale = (i === 0 ? e.eyeLeft : e.eyeRight) * eyesIn;
-      const sx = scale * e.eyeWidth;
-      const sy = scale * e.eyeHeight * blink;
+      const sx = scale * e.eyeWidth * p.fx;
+      const sy = scale * e.eyeHeight * blink * p.fy;
       eye.group.setAttribute(
         'transform',
-        `translate(${(eye.cx + gx).toFixed(2)} ${(eye.cy + gy + lift).toFixed(2)}) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(${-eye.cx} ${-eye.cy})`,
+        `translate(${(p.x + leadX).toFixed(2)} ${(p.y + leadY + lift).toFixed(2)}) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(${-eye.cx} ${-eye.cy})`,
       );
-      // Reflections lag the eye a little (they belong to the room, not the eye).
+      eye.group.style.opacity = fade(p.z).toFixed(3);
+      // Reflections stay put in the room while the eye turns under them.
       eye.shine.setAttribute(
         'transform',
-        `translate(${(eye.cx - gx * 0.4).toFixed(2)} ${(eye.cy - gy * 0.4).toFixed(2)}) scale(${shineIn.toFixed(4)}) translate(${-eye.cx} ${-eye.cy})`,
+        `translate(${(eye.cx - leadX * 0.5 - yaw * 10).toFixed(2)} ${(eye.cy - leadY * 0.5 + pitch * 8).toFixed(2)}) scale(${shineIn.toFixed(4)}) translate(${-eye.cx} ${-eye.cy})`,
       );
     });
 
-    // Mouth: a quadratic smile through the measured points (width/curve follow the
-    // expression). Talking opens it into a small smiling mouth: the lower lip drops
-    // with the voice's loudness and the corners draw in slightly.
+    // Mouth: closed, a smile through the measured points; talking, it rounds into
+    // a small open "o" whose height follows the voice. Both shapes use the same
+    // path structure (two cubic halves), so one morphs smoothly into the other.
     const [p0, p1, p2] = F.smile;
-    const open = clamp(this.mouthOpen * 1.25, 0, 1) * smileIn;
-    const mx = (p0[0] + p2[0]) / 2 + gx * 0.45;
-    const chordY = (p0[1] + p2[1]) / 2 + gy * 0.35;
-    const half = ((p2[0] - p0[0]) / 2) * e.mouthWidth * (1 - 0.14 * open);
-    const tiltY = (p2[1] - p0[1]) / 2;
-    const ctrlY = chordY + (2 * (p1[1] - (p0[1] + p2[1]) / 2)) * e.mouthCurve * (1 - 0.35 * open);
-    const ctrlX = mx + (p1[0] - (p0[0] + p2[0]) / 2);
-    const lowerY = ctrlY + open * 30;
-    const left = `${(mx - half).toFixed(2)} ${(chordY - tiltY).toFixed(2)}`;
-    const right = `${(mx + half).toFixed(2)} ${(chordY + tiltY).toFixed(2)}`;
-    this.smile.setAttribute(
-      'd',
-      `M${left} Q${ctrlX.toFixed(2)} ${ctrlY.toFixed(2)} ${right} Q${ctrlX.toFixed(2)} ${lowerY.toFixed(2)} ${left} Z`,
-    );
+    const open = clamp(this.mouthOpen * 1.3, 0, 1) * smileIn;
+    const L = projectOnHead(p0[0], p0[1], yaw, pitch);
+    const C = projectOnHead(p1[0], p1[1], yaw, pitch);
+    const R = projectOnHead(p2[0], p2[1], yaw, pitch);
+    const ox = leadX * 0.6;
+    const oy = leadY * 0.5;
+    const mx = (L.x + R.x) / 2 + ox;
+    const my = (L.y + R.y) / 2 + oy;
+    const half = ((R.x - L.x) / 2) * e.mouthWidth;
+    const tilt = (R.y - L.y) / 2;
+    // Smile (closed): quadratic through the dip, as cubic controls.
+    const dip = (C.y + oy - my) * 2 * e.mouthCurve;
+    const sL: Pt = [mx - half, my - tilt];
+    const sR: Pt = [mx + half, my + tilt];
+    const q: Pt = [mx + (C.x + ox - mx), my + dip];
+    const sc1: Pt = [sL[0] + (2 / 3) * (q[0] - sL[0]), sL[1] + (2 / 3) * (q[1] - sL[1])];
+    const sc2: Pt = [sR[0] + (2 / 3) * (q[0] - sR[0]), sR[1] + (2 / 3) * (q[1] - sR[1])];
+    // Open "o": an ellipse a little narrower than the smile, dropping as it opens.
+    const rx = half * 0.5 * (0.7 + 0.3 * open) * C.fx;
+    const ry = (10 + 30 * open) * C.fy;
+    const cy = my + dip * 0.35 + ry * 0.35;
+    const k = 1.33;
+    const oL: Pt = [mx - rx, cy];
+    const oR: Pt = [mx + rx, cy];
+    const t = smooth(0, 0.35, open);
+    const mix = (a: Pt, b: Pt): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    const A = mix(sL, oL);
+    const B = mix(sR, oR);
+    const u1 = mix(sc1, [mx - rx, cy - ry * k * 0.5]);
+    const u2 = mix(sc2, [mx + rx, cy - ry * k * 0.5]);
+    const d1 = mix(sc2, [mx + rx, cy + ry * k]);
+    const d2 = mix(sc1, [mx - rx, cy + ry * k]);
+    const f = (pt: Pt) => `${pt[0].toFixed(2)} ${pt[1].toFixed(2)}`;
+    this.smile.setAttribute('d', `M${f(A)} C${f(u1)} ${f(u2)} ${f(B)} C${f(d1)} ${f(d2)} ${f(A)} Z`);
+    this.smile.style.opacity = fade(C.z).toFixed(3);
     // Drawn in during the facial reveal; afterwards fully visible.
     if (smileIn < 1) {
       const length = this.smile.getTotalLength();
@@ -456,6 +584,8 @@ export class PaperBuddyView implements BuddyView {
     }
   }
 }
+
+type Pt = [number, number];
 
 function el(name: string): SVGGElement {
   return document.createElementNS(SVG_NS, name) as SVGGElement;

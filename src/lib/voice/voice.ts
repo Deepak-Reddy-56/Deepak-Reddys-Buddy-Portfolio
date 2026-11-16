@@ -407,6 +407,15 @@ class BuddyVoice {
     this.stopLine();
   }
 
+  /** How far through the current recorded line he is (0..1), or null when not speaking one. */
+  progress(): number | null {
+    const active = this.active;
+    if (!active) return null;
+    const audio = active.audio;
+    const t = audio && !audio.paused ? audio.currentTime : active.media;
+    return clamp01(t / active.line.duration);
+  }
+
   get isSpeaking(): boolean {
     return this.speaking || this.active !== null;
   }
@@ -430,5 +439,7 @@ class BuddyVoice {
     return Math.min(1, 0.25 + 0.55 * flutter + 0.35 * accent);
   }
 }
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 export const buddyVoice = new BuddyVoice();

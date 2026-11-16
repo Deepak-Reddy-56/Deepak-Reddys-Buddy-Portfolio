@@ -32,6 +32,17 @@
   text-wrap: balance;
 }
 
+/* Corner: the hero's resting spot, top-right — Buddy small, his line to his left. */
+.corner {
+  --buddy-size: clamp(50px, 3.6vw, 60px);
+  flex-direction: row-reverse;
+  gap: clamp(12px, 1.1vw, 16px);
+}
+
+.corner .line {
+  max-width: 300px;
+}
+
 /* Inline: opens a section, Buddy to the left of a short line. */
 .inline {
   --buddy-size: clamp(72px, 6.4vw, 92px);
@@ -64,6 +75,14 @@
 
   .menu {
     --buddy-size: 68px;
+  }
+
+  .corner {
+    --buddy-size: 52px;
+  }
+
+  .corner .line {
+    max-width: 240px;
   }
 }
 

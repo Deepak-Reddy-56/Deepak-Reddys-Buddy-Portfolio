@@ -99,7 +99,7 @@
 .controls {
   transition: opacity 600ms var(--ease-out);
 }
-:global(html[data-intro='playing']) .controls {
+:global(html[data-intro]:not([data-profile])) .controls {
   opacity: 0;
   transition: none;
 }

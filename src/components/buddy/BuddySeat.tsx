@@ -1,8 +1,9 @@
 import type { Line } from '../../content/dialogue';
+import { SpokenLine } from '../ui/SpokenLine';
 import { TwoTone } from '../ui/TwoTone';
 import styles from './BuddySeat.module.css';
 
-export type BuddySeatSize = 'hero' | 'inline' | 'menu';
+export type BuddySeatSize = 'hero' | 'corner' | 'inline' | 'menu';
 
 type BuddySeatProps = {
   /** Unique seat name. M3's single shared Buddy will fly between seats by id. */
@@ -10,6 +11,8 @@ type BuddySeatProps = {
   size: BuddySeatSize;
   line: Line;
   className?: string;
+  /** Reveal the line karaoke-style when Buddy lands (grey → ink, word by word). */
+  spoken?: boolean;
 };
 
 /**
@@ -18,10 +21,11 @@ type BuddySeatProps = {
  * (`data-buddy-seat`), so layout never shifts and no stand-in can appear.
  *
  * - hero:   large, centred, line below
+ * - corner: small, top-right of the hero, line to the left
  * - inline: small, line to the right — opens a section
  * - menu:   small, inside the menu sheet
  */
-export function BuddySeat({ seat, size, line, className }: BuddySeatProps) {
+export function BuddySeat({ seat, size, line, className, spoken = false }: BuddySeatProps) {
   return (
     <figure className={[styles.seat, styles[size], className].filter(Boolean).join(' ')} data-buddy-seat={seat}>
       {/* Reserved space only: the one live Buddy (BuddyStage) is positioned over it. */}
@@ -29,7 +33,11 @@ export function BuddySeat({ seat, size, line, className }: BuddySeatProps) {
       <figcaption className={styles.caption}>
         <span className="visually-hidden">Buddy says: </span>
         {/* Keyed by text, so a new line (Buddy speaking) reveals word by word again. */}
-        <TwoTone key={line.lead + '|' + (line.rest ?? '')} as="span" lead={line.lead} rest={line.rest} className={styles.line} words />
+        {spoken ? (
+          <SpokenLine key={line.lead + '|' + (line.rest ?? '')} line={line} mode="timed" className={styles.line} />
+        ) : (
+          <TwoTone key={line.lead + '|' + (line.rest ?? '')} as="span" lead={line.lead} rest={line.rest} className={styles.line} words />
+        )}
       </figcaption>
     </figure>
   );

@@ -6,8 +6,8 @@
 export type Line = { lead: string; rest?: string };
 
 export const dialogue = {
-  /** Buddy's resting line on the hero, beside Deepak's profile (the intro speaks its own lines). */
-  hero: { lead: 'This is Deepak.', rest: 'He built me.' },
+  /** Buddy's resting line in the hero's top-right corner (the intro speaks its own lines). */
+  hero: { lead: 'He built me with React, TypeScript', rest: 'and a little bit of love. Mostly the first two.' },
   about: { lead: 'Let’s meet the person', rest: 'behind the builds.' },
   work: { lead: 'Right, these are the things', rest: 'he’s been making.' },
   contact: { lead: 'Fancy building', rest: 'something together?' },

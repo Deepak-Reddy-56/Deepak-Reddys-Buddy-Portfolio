@@ -81,7 +81,7 @@
   transition: opacity 600ms var(--ease-out) 300ms;
 }
 
-:global(html[data-intro='playing']) .rail {
+:global(html[data-intro]:not([data-details])) .rail {
   opacity: 0;
   transition: none;
 }

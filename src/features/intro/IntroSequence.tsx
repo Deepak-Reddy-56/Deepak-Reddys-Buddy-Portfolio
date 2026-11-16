@@ -33,6 +33,10 @@ const TERMINAL_RADIUS = 46;
 const PROFILE_PARTS = { photo: '[data-profile-part="photo"]', tag: '[data-profile-part="tag"]' } as const;
 const HERO_SEAT = '[data-buddy-seat="hero"]';
 const HERO_SLOT = HERO_SEAT + ' [data-buddy-slot]';
+/** Where Buddy stands (centre of the screen) while he introduces himself and Deepak. */
+const INTRO_SLOT = '[data-intro-slot]';
+/** His flight from the middle to his corner at the end of the intro. */
+const FLY_MS = 1150;
 /** Buddy's canvas is the padded mask; his body is this fraction of its width. */
 const BODY_FRACTION = buddyGeometry.body.width / buddyGeometry.width;
 const CANVAS_ASPECT = buddyGeometry.height / buddyGeometry.width;
@@ -48,9 +52,15 @@ function showProfile(show: boolean): void {
   else delete document.documentElement.dataset.profile;
 }
 
-/** Centre the terminal on Buddy's hero seat, so the morph shrinks in place (no travel, no pop). */
-function alignTerminalToHeroSlot(windowEl: HTMLDivElement | null): void {
-  const slot = document.querySelector<HTMLElement>(HERO_SLOT);
+/** Bio and stats come in as Buddy flies to his corner. */
+function showDetails(show: boolean): void {
+  if (show) document.documentElement.dataset.details = 'shown';
+  else delete document.documentElement.dataset.details;
+}
+
+/** Centre the terminal on Buddy's intro spot, so the morph shrinks in place (no travel, no pop). */
+function alignTerminalToIntroSlot(windowEl: HTMLDivElement | null): void {
+  const slot = document.querySelector<HTMLElement>(INTRO_SLOT);
   const scene = windowEl?.parentElement;
   if (!windowEl || !slot || !scene) return;
   scene.style.setProperty('--terminal-align-x', '0px');
@@ -62,11 +72,33 @@ function alignTerminalToHeroSlot(windowEl: HTMLDivElement | null): void {
   scene.style.setProperty('--terminal-align-y', hero.top + hero.height / 2 - (terminal.top + terminal.height / 2) + 'px');
 }
 
-function heroSeat(): { x: number; y: number; size: number } | null {
-  const slot = document.querySelector<HTMLElement>(HERO_SLOT);
+type Seat = { x: number; y: number; size: number };
+
+function slotSeat(selector: string): Seat | null {
+  const slot = document.querySelector<HTMLElement>(selector);
   if (!slot) return null;
   const r = slot.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2, size: r.width };
+}
+
+/** His corner (top-right): where the director keeps him after the intro. */
+const heroSeat = () => slotSeat(HERO_SLOT);
+/** The middle of the screen, where he talks during the intro. */
+const introSeat = () => slotSeat(INTRO_SLOT);
+
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+/** A gentle arc from the middle up to his corner. */
+function flightPoint(from: Seat, to: Seat, u: number): Seat {
+  const e = easeInOut(u);
+  const cx = from.x + (to.x - from.x) * 0.35;
+  const cy = Math.min(from.y, to.y) - Math.abs(to.y - from.y) * 0.25;
+  const a = 1 - e;
+  return {
+    x: a * a * from.x + 2 * a * e * cx + e * e * to.x,
+    y: a * a * from.y + 2 * a * e * cy + e * e * to.y,
+    size: lerp(from.size, to.size, e),
+  };
 }
 
 function terminalBox(windowEl: HTMLDivElement): MorphBox {
@@ -75,7 +107,7 @@ function terminalBox(windowEl: HTMLDivElement): MorphBox {
 }
 
 /** The canvas box Buddy occupies in his seat (body + padding), as a morph target. */
-function seatBox(seat: { x: number; y: number; size: number }): MorphBox {
+function seatBox(seat: Seat): MorphBox {
   const w = seat.size / BODY_FRACTION;
   return { x: seat.x, y: seat.y, w, h: w * CANVAS_ASPECT, radius: 0 };
 }
@@ -88,6 +120,7 @@ function activateHeroLine(): void {
 function settleImmediately(view: PaperBuddyView | null): void {
   if (view) {
     view.setMorph(1, null);
+    view.setSpin(0);
     view.setFaceReveal(1);
     view.lookAt(0, 0, true);
     view.model.setBlink(0);
@@ -98,6 +131,7 @@ function settleImmediately(view: PaperBuddyView | null): void {
   }
   activateHeroLine();
   showProfile(true);
+  showDetails(true);
 }
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
@@ -152,10 +186,11 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     window.scrollTo({ top: 0, behavior: 'instant' });
     document.querySelectorAll('[data-buddy-active]').forEach((seat) => seat.removeAttribute('data-buddy-active'));
     showProfile(false);
+    showDetails(false);
     buddySpeech.set(null);
     buddyHost.view?.setConcealed(true);
     setIntroState('playing');
-    const align = () => alignTerminalToHeroSlot(windowRef.current);
+    const align = () => alignTerminalToIntroSlot(windowRef.current);
     align();
     window.addEventListener('resize', align, { passive: true });
     void document.fonts?.ready.then(align);
@@ -200,6 +235,8 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     let expression: ExpressionName = 'idle';
     /** What he looks at while talking: the visitor (null), or Deepak's photo / name tag. */
     let lookTarget: 'photo' | 'tag' | null = null;
+    /** E: his flight to the corner (wall-clock start, and where from / to). */
+    let flight: { at: number; from: Seat; to: Seat } | null = null;
     const fired = new Set<string>();
     const once = (key: string, condition: boolean, action: () => void) => {
       if (condition && !fired.has(key)) {
@@ -218,8 +255,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     // The jokes are picked per visit from a pool (see scripts/buddy-lines.json).
     const say = async (spoken: BuddyLine) => {
       if (finished.current) return;
-      buddySpeech.set(spoken.caption);
-      activateHeroLine(); // his caption appears as he starts talking
+      buddySpeech.set(spoken.caption); // the caption under him, darkening word by word as he speaks
       await buddyVoice.playLine(spoken);
     };
     const script = async () => {
@@ -245,6 +281,21 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       expression = 'happy';
       await wait(400);
       await say(lines.deepakJoke);
+      if (finished.current) return;
+      await wait(500);
+      // E: he turns away and flies up to his corner; the bio and stats come in.
+      const from = introSeat();
+      const to = heroSeat();
+      if (!from || !to) {
+        finish('done');
+        return;
+      }
+      expression = 'flying';
+      showDetails(true);
+      flight = { at: performance.now(), from, to };
+      await wait(FLY_MS);
+      activateHeroLine(); // his resting line writes itself in beside him
+      expression = 'happy';
       await wait(700);
       finish('done');
     };
@@ -301,7 +352,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       const e = morph.swap + (r - swappedAt);
       const f = morphAt(e);
       const from = terminalBox(windowEl);
-      const seat = heroSeat();
+      const seat = introSeat();
       const to = seat ? seatBox(seat) : from;
       const w = lerp(from.w, to.w, f.shrink);
       const h = lerp(from.h, to.h, f.shrink);
@@ -317,6 +368,14 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
           h,
           radius: lerp(TERMINAL_RADIUS, Math.min(w, h) / 2, f.form),
         });
+      } else if (flight) {
+        // E: the flight — he turns his face away mid-air and back round as he lands.
+        const u = Math.min(1, (now - flight.at) / FLY_MS);
+        const target = heroSeat() ?? flight.to;
+        const q = flightPoint(flight.from, target, u);
+        view.setMorph(1, null);
+        view.place(q.x, q.y, q.size);
+        view.setSpin(Math.PI * 0.85 * Math.sin(Math.PI * Math.min(1, u * 1.05)));
       } else if (seat) {
         view.setMorph(1, null);
         view.place(seat.x, seat.y, seat.size);
@@ -367,7 +426,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       return;
     }
     goTo('running');
-    alignTerminalToHeroSlot(windowRef.current);
+    alignTerminalToIntroSlot(windowRef.current);
     runAt.current = performance.now();
   }, [reducedMotion, finish, goTo, lines]);
 

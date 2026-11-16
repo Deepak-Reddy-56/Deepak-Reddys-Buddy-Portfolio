@@ -20,6 +20,8 @@ import type { BuddyPose, BuddyView } from './types';
 /** Flight into / out of the menu sheet: a critically damped spring in screen space. */
 type MenuFlight = { target: 'menu' | 'page'; v: { x: number; y: number; s: number } };
 
+/** How long he keeps watching the pointer after it stops moving. */
+const POINTER_ATTENTION_MS = 9000;
 const SEAT_SELECTOR = '[data-buddy-seat]';
 const SCROLL_SETTLE_MS = 180;
 const IDLE_BOB_MS = 6000;
@@ -430,7 +432,9 @@ export class BuddyDirector {
     // 5. Face: gaze, blink, expression.
     this.updateGaze(now, seated, flying);
     this.updateBlink();
-    this.view.model.setExpression(this.menuFlight || flying > 0.15 ? 'flying' : this.expressionFor(this.activeSeat));
+    this.view.model.setExpression(
+      this.menuFlight || flying > 0.15 ? 'flying' : this.pointerOnHim(now, seated) ? 'delighted' : this.expressionFor(this.activeSeat),
+    );
 
     // 6. Draw — never while the intro owns Buddy (it places him itself, and hands
     //    him over exactly at the hero seat this director would put him in).
@@ -485,6 +489,12 @@ export class BuddyDirector {
     return (seatId && seatExpressions[seatId]) || 'idle';
   }
 
+  /** The pointer is resting on Buddy (desktop): he lights up. */
+  private pointerOnHim(now: number, seated: boolean): boolean {
+    if (!seated || !this.pointer || now - this.pointer.at > POINTER_ATTENTION_MS) return false;
+    return Math.hypot(this.pointer.x - this.pos.x, this.pointer.y - this.pos.y) < this.pos.size * 0.6;
+  }
+
   private updateGaze(now: number, seated: boolean, flying: number): void {
     if (!seated || flying > 0.05) {
       const sp = Math.hypot(this.vel.x, this.vel.y) || 1;
@@ -496,10 +506,14 @@ export class BuddyDirector {
       this.view.model.setGaze(0.85, -0.1); // glance at the line he's introducing (to his right)
       return;
     }
-    if (this.pointer && now - this.pointer.at < 4000) {
-      const dx = (this.pointer.x - this.pos.x) / (this.viewport.w * 0.5);
-      const dy = (this.pos.y - this.pointer.y) / (this.viewport.h * 0.5);
-      this.view.model.setGaze(dx, dy);
+    if (this.pointer && now - this.pointer.at < POINTER_ATTENTION_MS) {
+      // He turns his whole head to follow the pointer: full turn when it is far,
+      // gentler as it comes close (and straight at you when it's on him).
+      const dx = this.pointer.x - this.pos.x;
+      const dy = this.pos.y - this.pointer.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const reach = dist / (dist + this.pos.size * 0.9);
+      this.view.model.setGaze((dx / dist) * reach * 1.1, (dy / dist) * reach);
       return;
     }
     // Left alone, he looks around now and then.

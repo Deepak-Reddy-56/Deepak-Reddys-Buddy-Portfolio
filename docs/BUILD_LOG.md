@@ -500,3 +500,14 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Buddy now holds a beat at punctuation: ~380 ms after a sentence, ~460 ms on "...", ~170 ms at a comma or colon. Each mark's position is mapped onto the recording and snapped to a real silence in the envelope; the audio pauses and the mouth closes during the beat. The same clock drives silent (sound-off) playback.
 - Longer gaps between lines (after "Hey, I'm Buddy!", before turning to Deepak, before the Deepak joke). The look at the name tag now lands on the beat before "He built me."
 - Measured: self joke ~3.1 s → ~3.75 s, Deepak joke ~4.2 s → ~5.0 s.
+
+## Adam-style hero choreography and a turning 3D head
+
+Reference: the owner's screen recording of adamperlis.com (intro → hero).
+
+- **Head that turns:** Buddy's face is painted on a sphere (`projectOnHead` in `PaperBuddyView`). Turning slides the eyes and mouth across the body, foreshortens them near the edge and hides them round the back, clipped to the head. Head angles follow the gaze on an under-damped spring (yaw ±57°, pitch ±36°); the eyes lead slightly and the head catches up. The chrome reflections swing with the turn (`u_angle`).
+- **Pointer:** when seated he turns his whole head towards the pointer (full turn when far, gentler when close) for 9 s after it last moved, then goes back to idle glances. With the pointer on him he squints happily (`delighted`).
+- **Wake-up and mouth:** his eyes appear closed during the face reveal and open. Talking, the smile rounds into a small open "o" whose height follows the voice; closed, it is the smile again.
+- **Choreography:** the terminal becomes Buddy in the middle of the screen (`[data-intro-slot]`), and he talks there with a karaoke caption below him (`SpokenLine`: grey words turn ink as they are spoken). When he introduces Deepak, the profile (top-left) and the navbar pop in, and he turns right round to look at the photo, then the tag. After the joke he turns away and flies in an arc to his corner (top-right, line to his left). The bio and stats come in (`html[data-details]`), the stats stagger and numbers count up, and his resting line writes itself in.
+- **Hero layout:** profile is photo plus "Hello, I'm Deepak. / I'm a software developer." with no pill. The bio has a chrome Contact pill (its highlight follows the pointer) and "See the work →". The centre of the hero is left open for a future feature.
+- QA: regression suite passes (reduced motion, no WebGL, context loss/restore, About seat, menu, Strict Mode dev, idle blinks/glances); no layout overlaps at 1280/1920/820/390.

@@ -1,22 +1,15 @@
 .hero {
+  --hero-inset: clamp(20px, 6.6vw, 128px);
   position: relative;
-  display: grid;
   min-height: 100svh;
-  padding: 0 var(--gutter);
+  padding: 0 var(--hero-inset);
 }
 
-.stage {
-  display: grid;
-  place-items: center;
-  padding: 150px 0 120px;
-}
-
-/* ── Profile: photo + tag, upper-left at a comfortable reading height
-   (the navbar has the top centre) ── */
+/* ── Profile: photo + two lines, top-left ── */
 .profile {
   position: absolute;
-  top: clamp(88px, 15vh, 156px);
-  left: calc(var(--gutter) + clamp(0px, 2vw, 32px));
+  top: clamp(88px, 13vh, 150px);
+  left: var(--hero-inset);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -27,8 +20,8 @@
   display: grid;
   overflow: hidden;
   place-items: center;
-  width: 60px;
-  height: 60px;
+  width: 52px;
+  height: 52px;
   flex: none;
   border-radius: 50%;
   background: var(--color-ink);
@@ -36,7 +29,6 @@
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  box-shadow: 0 10px 30px -14px rgba(17, 17, 17, 0.45);
 }
 
 .photo img {
@@ -48,10 +40,8 @@
 .tag {
   display: flex;
   flex-direction: column;
-  padding: 8px 16px;
-  border-radius: 16px;
-  background: var(--color-surface);
   font-size: var(--text-base);
+  font-weight: inherit;
   line-height: 1.4;
   white-space: nowrap;
 }
@@ -59,45 +49,115 @@
 .tagLead { color: var(--color-ink); }
 .tagRest { color: var(--color-ink-2); }
 
-/* ── Bio (bottom-left) and stats (bottom-right) ──────────── */
+/* ── Buddy's corner: top-right, his line to his left ── */
+.corner {
+  position: absolute;
+  top: clamp(150px, 22vh, 250px);
+  right: var(--hero-inset);
+}
+
+/* ── Intro stage: the middle of the screen, used only while he introduces himself ── */
+.introStage {
+  position: absolute;
+  top: 47svh;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(18px, 1.8vw, 26px);
+  width: min(340px, 86vw);
+  transform: translate(-50%, calc(var(--intro-size) * -0.433));
+  text-align: center;
+  pointer-events: none;
+  --intro-size: clamp(120px, 8.6vw, 168px);
+}
+
+.introSlot {
+  display: block;
+  width: var(--intro-size);
+  height: calc(var(--intro-size) * 0.867);
+}
+
+.introCaption {
+  min-height: 3em;
+  transition: opacity 360ms var(--ease-out);
+}
+
+:global(html:not([data-intro])) .introStage,
+:global(html[data-details]) .introCaption {
+  opacity: 0;
+}
+
+/* ── Bio + actions (bottom-left), stats (bottom-right) ── */
 .bio {
   position: absolute;
-  bottom: clamp(32px, 6vh, 56px);
-  left: var(--gutter);
-  max-width: 360px;
+  bottom: clamp(32px, 7vh, 72px);
+  left: var(--hero-inset);
+  max-width: 380px;
+}
+
+.bioText {
   color: var(--color-ink-2);
   font-size: var(--text-sm);
   line-height: 1.6;
 }
 
-.bioLead { color: var(--color-ink); }
+.bioLead {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--color-ink);
+  font-size: var(--text-base);
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+/* Contact: a small chrome pill whose highlight follows the pointer. */
+.contact {
+  --mx: 30%;
+  --my: 20%;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background:
+    radial-gradient(120% 140% at var(--mx) var(--my), #ffffff 0%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(168deg, #f4f4f6 0%, #c9c9cf 38%, #f7f7f9 52%, #a9a9b2 74%, #e6e6ea 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(17, 17, 17, 0.12),
+    0 6px 16px -8px rgba(17, 17, 17, 0.35);
+  font-size: var(--text-sm);
+}
 
 .stats {
   position: absolute;
-  right: var(--gutter);
-  bottom: clamp(32px, 6vh, 56px);
+  right: var(--hero-inset);
+  bottom: clamp(32px, 7vh, 72px);
   display: grid;
-  min-width: 260px;
-  gap: 6px;
+  min-width: 280px;
+  gap: 4px;
   font-size: var(--text-sm);
 }
 
 .stat {
   display: flex;
   justify-content: space-between;
-  gap: 24px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--color-line);
+  gap: 32px;
 }
 
 .stat dt { color: var(--color-ink-2); }
-.stat dd { color: var(--color-ink); text-align: right; }
+.stat dd { color: var(--color-ink); font-variant-numeric: tabular-nums; text-align: right; }
 
 /* Tablet widths: keep the profile clear of the centred navbar. */
 @media (max-width: 900px) {
   .profile {
     top: max(calc(var(--control-top) + var(--control-size) + 28px), 11vh);
-    left: var(--gutter);
   }
 }
 
@@ -115,7 +175,13 @@
     margin-top: calc(var(--control-top) + var(--control-size) + 24px);
   }
 
-  .stage { padding: 56px 0 40px; }
+  .corner {
+    position: static;
+    align-self: flex-end;
+    margin-top: 28px;
+  }
+
+  .introStage { top: 46svh; }
 
   .bio,
   .stats {
@@ -123,49 +189,54 @@
     max-width: none;
   }
 
-  .stats { margin-top: 24px; min-width: 0; }
+  .bio { margin-top: auto; padding-top: 48px; }
+  .stats { margin-top: 28px; min-width: 0; }
   .tag { white-space: normal; }
 }
 
-/* ── The pop-up: during the intro the profile waits, greyed, for Buddy's cue ──
-   (html[data-profile] is set when Buddy turns to introduce Deepak). Without the
-   intro (return visits, reduced motion) everything is simply shown. */
+/* ── How it comes in during the intro ──
+   html[data-profile]: Buddy introduces Deepak — profile (and navbar) pop in.
+   html[data-details]: Buddy has flown to his corner — bio and stats come in.
+   Without the intro (return visits, reduced motion) everything is simply shown. */
 .profile,
 .bio,
 .stats {
-  transition:
-    opacity 420ms var(--ease-out),
-    filter 420ms var(--ease-out);
+  transition: opacity 420ms var(--ease-out);
 }
 
 :global(html[data-intro]:not([data-profile])) .profile,
-:global(html[data-intro]:not([data-profile])) .bio,
-:global(html[data-intro]:not([data-profile])) .stats {
-  opacity: 0.32;
-  filter: grayscale(1);
+:global(html[data-intro]:not([data-details])) .bio,
+:global(html[data-intro]:not([data-details])) .stats {
+  opacity: 0;
+  pointer-events: none;
 }
 
 :global(html[data-profile]) .profile {
   animation: profile-pop 640ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 
-:global(html[data-profile]) .bio,
-:global(html[data-profile]) .stats {
-  animation: profile-rise 560ms var(--ease-out) 160ms both;
+:global(html[data-details]) .bio {
+  animation: rise 620ms var(--ease-out) both;
+}
+
+:global(html[data-details]) .stat {
+  animation: rise 520ms var(--ease-out) both;
+  animation-delay: calc(120ms + var(--i, 0) * 70ms);
 }
 
 @keyframes profile-pop {
-  0% { transform: scale(0.9); }
-  55% { transform: scale(1.06); }
-  100% { transform: scale(1); }
+  0% { opacity: 0; transform: scale(0.88); }
+  55% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-@keyframes profile-rise {
-  from { transform: translateY(8px); }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .profile,
   .bio,
-  .stats { transition: none; animation: none !important; }
+  .stats,
+  .stat { transition: none; animation: none !important; }
 }
