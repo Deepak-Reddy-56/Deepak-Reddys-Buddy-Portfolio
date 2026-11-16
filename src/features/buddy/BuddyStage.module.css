@@ -1,146 +1,61 @@
-/* One live Paper shader body, plus independent animated facial features. */
-.paperSkin {
+/* The one Buddy: a Paper Liquid Metal body and an SVG face in one positioned element. */
+.buddy {
   position: fixed;
   z-index: var(--z-buddy);
   top: 0;
   left: 0;
-  width: 264px;
-  height: 228px;
-  overflow: visible;
   opacity: 0;
   pointer-events: none;
-  transform: translate3d(-1200px, -1200px, 0);
-  transform-origin: center center;
-  will-change: transform;
-  transition: opacity 280ms var(--ease-in-out);
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  transition: opacity 260ms var(--ease-in-out);
 }
 
-.paperShader {
+/* During the introduction Buddy plays on top of the intro's white field. */
+:global(html[data-intro]) .buddy {
+  z-index: calc(var(--z-intro) + 1);
+  transition: none;
+}
+
+.buddy [data-part='breath'] {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+  transform-origin: 50% 88%;
+  animation: buddyBreath 4.6s ease-in-out infinite;
+}
+
+.buddy [data-part='body'] {
+  position: absolute;
+  inset: 0;
   background: transparent;
-  pointer-events: none;
 }
 
-.paperShader canvas {
-  position: absolute !important;
-  inset: 0 !important;
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  background: transparent !important;
-  pointer-events: none;
+.buddy [data-part='body'] canvas {
+  background: transparent;
 }
 
-.face {
+.buddy [data-part='face'] {
   position: absolute;
-  z-index: 2;
   inset: 0;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
   overflow: visible;
-  pointer-events: none;
 }
 
-.eyeLeft,
-.eyeRight {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: buddyBlink 5.2s infinite;
-}
-
-.eyeRight {
-  animation-delay: 0.08s;
-}
-
-.nose {
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.08));
-}
-
-.smile {
-  fill: none;
-  stroke: #111114;
-  stroke-width: 4.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.94;
-  transition: opacity 90ms linear;
-}
-
-.talkingMouth {
-  fill: #101013;
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.paperSkin[data-talking='true'] .smile {
-  opacity: 0.12;
-}
-
-.paperSkin[data-talking='true'] .talkingMouth {
-  opacity: 1;
-  animation: buddyTalk 140ms ease-in-out infinite alternate;
-}
-
-.canvas {
-  position: fixed;
-  z-index: var(--z-buddy);
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 280ms var(--ease-in-out);
-}
-
-/* Keep the live character hidden while the intro owns the screen. */
-:global(html[data-intro='playing']) .canvas,
-:global(html[data-intro='playing']) .paperSkin,
-:global(html[data-intro='leaving']) .canvas,
-:global(html[data-intro='leaving']) .paperSkin {
-  opacity: 0;
-  transition: none;
-}
-
-/* Reveal only after Paper has mounted its canvas and Buddy has a measured seat. */
-:global(html[data-intro='handoff']) .paperSkin[data-ready='true'],
-:global(html:not([data-intro])[data-buddy='3d']) .paperSkin[data-ready='true'] {
-  opacity: 1;
-}
-
-:global(html[data-intro='handoff']) .canvas,
-:global(html:not([data-intro])[data-buddy='3d']) .canvas {
-  opacity: 1;
-}
-
-/* Paper owns the body; Three.js is kept only as a real renderer fallback. */
-.paperSkin[data-ready='true'] + .canvas {
-  opacity: 0 !important;
-}
-
-@keyframes buddyBlink {
-  0%, 92%, 95%, 100% { transform: scaleY(1); }
-  93.2%, 94.2% { transform: scaleY(0.075); }
-}
-
-@keyframes buddyTalk {
-  from { transform: scaleY(0.55); }
-  to { transform: scaleY(1.12); }
+/* Breathing is idle life, independent of the director (which sleeps when nothing changes). */
+@keyframes buddyBreath {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(-1.1%) scale(1.012, 0.992); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .eyeLeft,
-  .eyeRight,
-  .paperSkin[data-talking='true'] .talkingMouth {
+  .buddy [data-part='breath'] {
     animation: none;
   }
 
-  .paperSkin {
+  .buddy {
     transition: none;
   }
 }

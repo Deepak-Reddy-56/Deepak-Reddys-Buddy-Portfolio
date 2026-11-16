@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { seatExpressions, spokenIntro } from '../../content/dialogue';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { soundEngine } from '../../lib/audio/soundEngine';
-import { buddyVoice } from '../../lib/voice/voice';
-import { spokenIntro } from '../../content/dialogue';
+import { lerp } from '../../lib/easing';
 import { FrameLoop } from '../../lib/frameLoop';
-import type { ShaderStage } from '../../lib/webgl/ShaderStage';
-import { createTimingProbe, introDebugEnabled } from './introDebug';
+import { buddyVoice } from '../../lib/voice/voice';
+import { buddyGeometry } from '../buddy/buddyGeometry';
+import { buddyHost } from '../buddy/buddyHost';
+import type { MorphBox, PaperBuddyView } from '../buddy/PaperBuddyView';
 import { IntroControls } from './IntroControls';
-import { boxFromRect, introUniforms, marks, type Box } from './introTimeline';
-import { LiquidScene } from './LiquidScene';
 import { COMMAND, TerminalScene } from './TerminalScene';
+import { morph, morphAt, READY_LIMIT_MS } from './terminalMorph';
 import type { IntroEnd } from './useIntroGate';
 import styles from './Intro.module.css';
 
@@ -21,13 +22,22 @@ type IntroSequenceProps = {
   soundSupported: boolean;
   onSound: (on: boolean) => void;
   onFinish: (reason: IntroEnd) => void;
-  onPrepareHandoff: () => void;
-  buddyReady: boolean;
 };
 
 const TERMINAL_RADIUS = 22;
-const HERO_SLOT = '[data-buddy-seat="hero"] [data-buddy-slot]';
+const HERO_SEAT = '[data-buddy-seat="hero"]';
+const HERO_SLOT = HERO_SEAT + ' [data-buddy-slot]';
+/** Buddy's canvas is the padded mask; his body is this fraction of its width. */
+const BODY_FRACTION = buddyGeometry.body.width / buddyGeometry.width;
+const CANVAS_ASPECT = buddyGeometry.height / buddyGeometry.width;
 
+function setIntroState(value: 'playing' | 'leaving' | null): void {
+  const root = document.documentElement;
+  if (value) root.dataset.intro = value;
+  else delete root.dataset.intro;
+}
+
+/** Centre the terminal on Buddy's hero seat, so the morph shrinks in place (no travel, no pop). */
 function alignTerminalToHeroSlot(windowEl: HTMLDivElement | null): void {
   const slot = document.querySelector<HTMLElement>(HERO_SLOT);
   const scene = windowEl?.parentElement;
@@ -36,51 +46,66 @@ function alignTerminalToHeroSlot(windowEl: HTMLDivElement | null): void {
   scene.style.setProperty('--terminal-align-y', '0px');
   const terminal = windowEl.getBoundingClientRect();
   const hero = slot.getBoundingClientRect();
-  const terminalX = terminal.left + terminal.width / 2;
-  const terminalY = terminal.top + terminal.height / 2;
-  const heroX = hero.left + hero.width / 2;
-  const heroY = hero.top + hero.height / 2;
-  scene.style.setProperty('--terminal-align-x', (heroX - terminalX) + 'px');
-  scene.style.setProperty('--terminal-align-y', (heroY - terminalY) + 'px');
+  scene.style.setProperty('--terminal-align-x', hero.left + hero.width / 2 - (terminal.left + terminal.width / 2) + 'px');
+  scene.style.setProperty('--terminal-align-y', hero.top + hero.height / 2 - (terminal.top + terminal.height / 2) + 'px');
 }
-function setIntroState(value: 'playing' | 'leaving' | 'handoff' | null): void {
-  const root = document.documentElement;
-  if (value) root.dataset.intro = value;
-  else delete root.dataset.intro;
+
+function heroSeat(): { x: number; y: number; size: number } | null {
+  const slot = document.querySelector<HTMLElement>(HERO_SLOT);
+  if (!slot) return null;
+  const r = slot.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2, size: r.width };
+}
+
+/** The canvas box Buddy occupies in his seat (body + padding), as a morph target. */
+function seatBox(seat: { x: number; y: number; size: number }): MorphBox {
+  const w = seat.size / BODY_FRACTION;
+  return { x: seat.x, y: seat.y, w, h: w * CANVAS_ASPECT, radius: 0 };
+}
+
+function activateHeroLine(): void {
+  document.querySelector(HERO_SEAT)?.setAttribute('data-buddy-active', '');
+}
+
+/** Put the one Buddy exactly where the director will keep him, fully formed and small. */
+function settleImmediately(view: PaperBuddyView | null): void {
+  if (view) {
+    view.setMorph(1, null);
+    view.setFaceReveal(1);
+    view.lookAt(0, 0, true);
+    view.model.setBlink(0);
+    view.model.setExpression(seatExpressions.hero ?? 'idle');
+    const seat = heroSeat();
+    if (seat) view.place(seat.x, seat.y, seat.size);
+  }
+  activateHeroLine();
 }
 
 /**
- * The introduction, as one clock:
- *   A  terminal types → visitor runs it
- *   B  the window itself turns to liquid chrome (same box, now in the shader)
- *   C  the liquid settles into Buddy, exactly where the homepage keeps him,
- *      while the page fades up around him; then the DOM Buddy takes over.
+ * The introduction:
+ *   A  a glossy chrome terminal types its start command; the visitor presses Enter
+ *   B  the commands load for a moment
+ *   C  the terminal itself becomes Buddy — the same chrome surface shrinks into his
+ *      small seat, rounding into his silhouette only once he is small
+ *   D  his eyes and smile appear; he looks around and blinks
+ *   E  the page appears around him and the director takes over where he already is
  */
-export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish, onPrepareHandoff, buddyReady }: IntroSequenceProps) {
+export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish }: IntroSequenceProps) {
   const reducedMotion = useReducedMotion();
   const [step, setStep] = useState<Step>('typing');
   const [typed, setTyped] = useState(0);
   const [outputLines, setOutputLines] = useState(0);
   const [handedOff, setHandedOff] = useState(false);
-  // Let the actual fragment shader prove it compiled and warmed successfully.
-  const [webgl, setWebgl] = useState(true);
-  const [shaderReady, setShaderReady] = useState(false);
-  const [shaderTransition, setShaderTransition] = useState(false);
-  const [shaderError, setShaderError] = useState<string | null>(null);
+  const [fallbackExit, setFallbackExit] = useState(false);
   const [touch] = useState(() => window.matchMedia('(hover: none)').matches);
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
   const runRef = useRef<HTMLButtonElement>(null);
-  const stageRef = useRef<ShaderStage | null>(null);
   const loopRef = useRef<FrameLoop | null>(null);
   const stepRef = useRef<Step>('typing');
   const runId = useRef(`intro-${Math.random().toString(36).slice(2)}`);
   const finished = useRef(false);
-  const pendingRun = useRef(false);
-  const runAction = useRef<() => void>(() => {});
-  const buddyReadyRef = useRef(buddyReady);
-  buddyReadyRef.current = buddyReady;
 
   const goTo = useCallback((next: Step) => {
     stepRef.current = next;
@@ -94,32 +119,18 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish,
       if (reason === 'skip') buddyVoice.cancel();
       loopRef.current?.dispose();
       loopRef.current = null;
+      settleImmediately(buddyHost.view);
       setIntroState(null);
       onFinish(reason);
     },
     [onFinish],
   );
-
   const skip = useCallback(() => finish('skip'), [finish]);
-  const markShaderReady = useCallback(() => setShaderReady(true), []);
-  const markUnavailable = useCallback((reason = 'Unknown Liquid Chrome initialization error.') => {
-    console.error('[intro] Liquid Chrome shader unavailable:', reason);
-    setShaderError(reason);
-    setWebgl(false);
-    setShaderReady(false);
-    setShaderTransition(false);
-    if (stepRef.current === 'running' || stepRef.current === 'leaving') {
-      loopRef.current?.dispose();
-      loopRef.current = null;
-      setHandedOff(false);
-      goTo('ready');
-      setIntroState('playing');
-    }
-  }, [goTo]);
 
-  // Align the terminal to Buddy's final hero seat before the first paint.
+  // Before first paint: own the screen and align the terminal to the hero seat.
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
+    document.querySelectorAll('[data-buddy-active]').forEach((seat) => seat.removeAttribute('data-buddy-active'));
     setIntroState('playing');
     const align = () => alignTerminalToHeroSlot(windowRef.current);
     align();
@@ -133,7 +144,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish,
 
   useEffect(() => () => loopRef.current?.dispose(), []);
 
-  // Scene A: the command types itself.
+  // The command types itself.
   useEffect(() => {
     if (step !== 'typing') return;
     if (reducedMotion) {
@@ -156,49 +167,20 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish,
   const run = useCallback(() => {
     const current = stepRef.current;
     if (current !== 'typing' && current !== 'ready') return;
-
-    // Do not start the fallback timeline while the real shader is compiling.
-    // Queue the visitor's Enter/click and replay it after the ready/failure result.
-    if (webgl && (!shaderReady || stageRef.current === null)) {
-      pendingRun.current = true;
-      return;
-    }
-    if (!webgl) return;
-    pendingRun.current = false;
     soundEngine.unlock();
     buddyVoice.prime();
     soundEngine.play('enter');
     setTyped(COMMAND.length);
 
-    // Run is an explicit user action: keep the shape morph even when the OS
-    // requests reduced motion, but remove surface wobble, breathing and blink.
-    goTo('running');
-
-    const windowEl = windowRef.current;
-    alignTerminalToHeroSlot(windowEl);
-    const slot = document.querySelector<HTMLElement>(HERO_SLOT);
-    const stage = stageRef.current;
-    const useShader = webgl && shaderReady && stage !== null && windowEl !== null && slot !== null;
-    if (!useShader) {
-      setShaderError('The morph stage or its measured terminal/hero geometry is missing. The terminal has been kept visible.');
-      goTo('ready');
-      setIntroState('playing');
+    // Reduced motion: no morph — Buddy is simply in his seat.
+    if (reducedMotion) {
+      finish('done');
       return;
     }
-    setShaderTransition(true);
+    goTo('running');
+    alignTerminalToHeroSlot(windowRef.current);
 
-    let from: Box | null = windowEl ? boxFromRect(windowEl.getBoundingClientRect()) : null;
-    let to: Box | null = slot ? boxFromRect(slot.getBoundingClientRect()) : null;
-    const onResize = () => {
-      alignTerminalToHeroSlot(windowEl);
-      if (windowEl) from = boxFromRect(windowEl.getBoundingClientRect());
-      if (slot) to = boxFromRect(slot.getBoundingClientRect());
-    };
-    window.addEventListener('resize', onResize);
-
-    const m = marks;
-    // Hand-off target: the 3D Buddy (if it has loaded) or the static placeholder.
-    const toThreeD = document.documentElement.dataset.buddy === '3d';
+    let swappedAt: number | null = null;
     const fired = new Set<string>();
     const once = (key: string, condition: boolean, action: () => void) => {
       if (condition && !fired.has(key)) {
@@ -206,103 +188,91 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish,
         action();
       }
     };
+    /** No live Buddy: the terminal recedes and the page appears. Never a stand-in. */
+    const recede = () => {
+      loopRef.current?.dispose();
+      loopRef.current = null;
+      setFallbackExit(true);
+      window.setTimeout(() => finish('done'), 420);
+    };
 
-    const probe = introDebugEnabled ? createTimingProbe() : null;
-    let shaderFrameVisible = false;
-    let handoffStartedAt: number | null = null;
-    const handoffDuration = m.handoff[1] - m.handoff[0];
+    const loop = new FrameLoop((t, dtMs) => {
+      if (finished.current) return;
+      once('line1', t >= morph.line1, () => setOutputLines(1));
+      once('line2', t >= morph.line2, () => setOutputLines(2));
 
-    const loop = new FrameLoop((t) => {
-      probe?.frame(t);
-      once('line1', t >= 120, () => setOutputLines(1));
-      once('line2', t >= 400, () => setOutputLines(2));
-      once('startup', t >= (useShader ? marks.chrome[0] : 300), () => soundEngine.play('startup'));
-      once('swap', t >= m.swapStart, () => setHandedOff(true));
-      once('reveal', t >= m.revealPage[0], () => {
-        // Start the real page Buddy while the finished shader Buddy is still visible.
-        onPrepareHandoff();
+      const view = buddyHost.view;
+      const status = buddyHost.status;
+      const windowEl = windowRef.current;
+
+      // B: the commands "load" until the swap time and until Buddy is live.
+      if (swappedAt === null) {
+        if (status === 'unavailable' || t > READY_LIMIT_MS) {
+          recede();
+          return;
+        }
+        if (t < morph.swap || status !== 'live' || !view || !windowEl) return;
+        swappedAt = t;
+      }
+      // From here on Buddy must stay live; otherwise reveal the page rather than leave a blank intro.
+      if (status !== 'live' || !view || !windowEl) {
+        loopRef.current?.dispose();
+        loopRef.current = null;
+        finish('done');
+        return;
+      }
+
+      // Timeline time, anchored so a late swap (slow GPU start) still plays the whole morph.
+      const e = morph.swap + (t - swappedAt);
+      const f = morphAt(e);
+      const r = windowEl.getBoundingClientRect();
+      const from: MorphBox = { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height, radius: TERMINAL_RADIUS };
+      const seat = heroSeat();
+      const to = seat ? seatBox(seat) : from;
+      const w = lerp(from.w, to.w, f.shrink);
+      const h = lerp(from.h, to.h, f.shrink);
+      const box: MorphBox = {
+        x: lerp(from.x, to.x, f.shrink),
+        y: lerp(from.y, to.y, f.shrink),
+        w,
+        h,
+        radius: lerp(TERMINAL_RADIUS, Math.min(w, h) / 2, f.form),
+      };
+
+      once('swap', true, () => {
+        setHandedOff(true);
+        soundEngine.play('startup');
+      });
+
+      if (f.form < 1) {
+        view.setMorph(f.form, box);
+      } else if (seat) {
+        view.setMorph(1, null);
+        view.place(seat.x, seat.y, seat.size);
+      }
+      view.setFaceReveal(f.face);
+      view.model.setExpression(f.curious ? 'curious' : (seatExpressions.hero ?? 'idle'));
+      view.lookAt(f.lookX, f.lookY);
+      view.model.setBlink(f.blink);
+      view.tickFace(Math.max(dtMs, 1) / 1000);
+
+      once('blip', e >= morph.face[0] + 80, () => soundEngine.play('blip'));
+      once('speak', e >= morph.face[1] - 120, () => buddyVoice.sayOnce(runId.current, spokenIntro));
+      once('landed', f.form >= 1, activateHeroLine);
+      once('reveal', e >= morph.revealPage, () => {
         goTo('leaving');
         setIntroState('leaving');
       });
-
-      // Keep the finished liquid Buddy fully opaque until the replacement has
-      // mounted its Three.js face and Paper chrome canvas and has had a frame to warm.
-      if (handoffStartedAt === null && t >= m.handoff[0] && buddyReadyRef.current) {
-        handoffStartedAt = t;
-        setIntroState('handoff');
-      }
-
-      if (useShader && stage && from && to && stageRef.current === stage) {
-        once('blip', t >= marks.face[0] + 120, () => soundEngine.play('blip'));
-        // "Hey, I'm Buddy!" — once per run, only with sound on (the run itself was the gesture).
-        // Asked for a little before the face finishes forming: engines take ~50–300 ms to start.
-        once('speak', t >= marks.face[0] + 60, () => buddyVoice.sayOnce(runId.current, spokenIntro));
-        const shaderTime = handoffStartedAt === null
-          ? Math.min(t, m.handoff[0])
-          : m.handoff[0] + Math.min(handoffDuration, t - handoffStartedAt);
-        const u = introUniforms(shaderTime, from, to, TERMINAL_RADIUS, !toThreeD, reducedMotion);
-        if (handoffStartedAt !== null) {
-          const handoffProgress = Math.max(0, Math.min(1, (t - handoffStartedAt) / handoffDuration));
-          const introFaceOpacity = 1 - handoffProgress;
-          u.alpha = introFaceOpacity;
-          // The live Buddy renderer takes over eyes, nose and smile in the same
-          // 280 ms window, preventing a doubled face during the material cross-fade.
-          u.face *= introFaceOpacity;
-          u.smile *= introFaceOpacity;
-          u.blink *= introFaceOpacity;
-        }
-        stage.set('u_time', shaderTime / 1000);
-        stage.set('u_center', u.center);
-        stage.set('u_half', u.half);
-        stage.set('u_radius', u.radius);
-        stage.set('u_morph', u.morph);
-        stage.set('u_liquid', u.liquid);
-        stage.set('u_chrome', u.chrome);
-        stage.set('u_face', u.face);
-        stage.set('u_smile', u.smile);
-        stage.set('u_blink', u.blink);
-        stage.set('u_settle', u.settle);
-        stage.set('u_talk', buddyVoice.talk(performance.now()));
-        stage.set('u_alpha', u.alpha);
-        try {
-          stage.draw();
-          if (!shaderFrameVisible && t >= marks.swapStart) {
-            shaderFrameVisible = true;
-            setHandedOff(true);
-          }
-        } catch (error) {
-          const reason = error instanceof Error ? error.message : String(error);
-          console.error('[intro] Liquid Chrome draw failed:', error);
-          window.removeEventListener('resize', onResize);
-          markUnavailable(reason);
-          return;
-        }
-      }
-
-      if (handoffStartedAt !== null && t - handoffStartedAt >= handoffDuration) {
-        window.removeEventListener('resize', onResize);
-        probe?.report(t);
-        finish('done');
-      }
+      if (e >= morph.done) finish('done');
     });
     loopRef.current = loop;
     loop.start();
-  }, [reducedMotion, webgl, shaderReady, finish, goTo, markUnavailable, onPrepareHandoff]);
-
-  // Keep the latest run callback without capturing an obsolete state snapshot.
-  runAction.current = run;
-  useEffect(() => {
-    if (!pendingRun.current) return;
-    if (webgl && (!shaderReady || stageRef.current === null)) return;
-    pendingRun.current = false;
-    runAction.current();
-  }, [webgl, shaderReady]);
+  }, [reducedMotion, finish, goTo]);
 
   // Enter runs from anywhere (buttons keep their own Enter behaviour).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Enter' || event.repeat) return;
-      // Run and Skip keep their native Enter; everywhere else (incl. the sound switch) Enter runs.
       if (event.target instanceof HTMLButtonElement && !event.target.hasAttribute('data-enter-runs')) return;
       event.preventDefault();
       run();
@@ -327,20 +297,18 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish,
       tabIndex={-1}
     >
       <div className={styles.backdrop} aria-hidden="true" />
-      {webgl ? <LiquidScene stageRef={stageRef} active={shaderTransition} onReady={markShaderReady} onUnavailable={markUnavailable} /> : null}
       <TerminalScene
         typed={typed}
         outputLines={outputLines}
         ready={step === 'ready'}
         running={running}
-        handedOff={handedOff && shaderTransition}
-        fallbackExit={handedOff && !shaderTransition}
+        handedOff={handedOff}
+        fallbackExit={fallbackExit}
         touch={touch}
         onRun={run}
         windowRef={windowRef}
         runRef={runRef}
       />
-      {shaderError ? <p className={styles.shaderError} role="status">Liquid Metal transition unavailable: {shaderError}</p> : null}
       <div className={styles.controls}>
         <IntroControls soundEnabled={soundEnabled} soundSupported={soundSupported} onSound={onSound} onSkip={skip} />
       </div>

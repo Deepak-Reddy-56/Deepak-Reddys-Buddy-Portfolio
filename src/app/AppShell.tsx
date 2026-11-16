@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useCallback, useRef, type MouseEvent, type ReactNode } from 'react';
 import { ControlCluster } from '../components/shell/ControlCluster';
 import { MenuSheet } from '../components/shell/MenuSheet';
 import { ScrollProgress } from '../components/shell/ScrollProgress';
@@ -30,15 +30,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const chromeRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const activeLinkRef = useRef<HTMLAnchorElement>(null);
-  const [prepareBuddy, setPrepareBuddy] = useState(false);
-  const [buddyReady, setBuddyReady] = useState(false);
-
-  const prepareBuddyHandoff = useCallback(() => {
-    setBuddyReady(false);
-    setPrepareBuddy(true);
-  }, []);
-  const markBuddyReady = useCallback(() => setBuddyReady(true), []);
-
   useScrollProgress();
   useScrollLock(menu.isOpen || intro.active);
   useFocusTrap(chromeRef, menu.isOpen, { initialFocus: activeLinkRef, onEscape: menu.close });
@@ -63,8 +54,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { replay: replayIntro } = intro;
   const replay = useCallback(() => {
     menu.close();
-    setPrepareBuddy(false);
-    setBuddyReady(false);
     replayIntro();
   }, [menu, replayIntro]);
 
@@ -107,12 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SiteFooter onReplayIntro={replay} />
       </div>
 
-      <BuddyStage
-        menuOpen={menu.isOpen}
-        introActive={intro.active}
-        prepareForHandoff={prepareBuddy}
-        onReady={markBuddyReady}
-      />
+      <BuddyStage menuOpen={menu.isOpen} />
 
       {intro.active ? (
         <IntroSequence
@@ -121,8 +105,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           soundSupported={sound.supported}
           onSound={sound.set}
           onFinish={intro.finish}
-          onPrepareHandoff={prepareBuddyHandoff}
-          buddyReady={buddyReady}
         />
       ) : null}
     </>

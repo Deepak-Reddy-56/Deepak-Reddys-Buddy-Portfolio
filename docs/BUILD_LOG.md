@@ -430,3 +430,29 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 ### Validation
 - Confirmed Paper documents `image` as an effect mask requiring a transparent background and `colorBack` as the background color.
 - Production build and visual check at 1024 px still required.
+
+
+## 2026-11-16 — Step 1: terminal becomes a small chrome Buddy; one renderer
+
+### Owner direction
+- Keep the glossy chrome terminal and Enter-to-run. After the commands load, the terminal itself becomes Buddy.
+- Buddy: chrome body, elliptical eyes with a small white pupil, a smile, no nose. Small (Adam Perlis scale), never a large rounded object.
+- No legacy Buddies (white, flying in, placeholders). Buddy blinks, looks around and follows the pointer.
+
+### Root causes found
+- The intro used its own shader Buddy: after Run it showed a dark rectangle, a flat grey slab, then a terminal-sized rounded pebble that shrank into a pale pearl Buddy, swapped at the end for the Paper Buddy (different material and face).
+- Four Buddy renderers existed (intro shader, Paper skin, hidden Three.js model, CSS placeholder in every seat). The placeholder appeared whenever `html[data-buddy]` was not `'3d'`: on load, on effect cleanup and on any fallback.
+- The mask was cropped flat on all four edges and had stray alpha pixels (clipped, speckled Buddy).
+- Gaze/blink/expressions drove the invisible Three.js model. The director's timers used the frame loop's clock, which pauses while the director sleeps, so a 3 s blink interval stretched to about a minute.
+
+### Changes
+- One Buddy: `PaperBuddyView` (Paper Liquid Metal body on a cleaned mask + SVG face), lifecycle in `buddyHost` (`loading` / `live` / `unavailable`). Seats are reserved space only; no placeholder exists.
+- Intro: Run → commands load (~1.5 s) → Buddy's chrome surface takes over the terminal's exact box, shrinks while still rectangular, rounds into his silhouette once small → face appears → looks around, blinks → page appears; the director continues from the same pixel. If the renderer is not live, the terminal recedes and the page appears.
+- Face: elliptical eyes with one small white pupil and a smile; no nose. Pointer-following, idle glances and blinks driven by the director on wall-clock time.
+- Removed: Three.js Buddy, `BuddyPlaceholder`, the intro morph shader (`LiquidScene`, `liquidChrome.frag`, `introTimeline`, `introDebug`), `lib/webgl`. Dependencies: removed `three`, `@types/three`; added `@paper-design/shaders@0.0.82` explicitly (already installed via `@paper-design/shaders-react`, still used by the terminal).
+- The terminal renders its Paper surface only where WebGL2 exists (no uncaught error otherwise).
+
+### Validation (headless Chrome, software WebGL)
+- Typecheck and build pass. One canvas in every state; no placeholder at load.
+- Intro at 1024 px: canvas box 424 → 244 → 163 → 142 px wide (body 110 px), never a large round shape; director takes over at the same position.
+- Idle: 3 blinks and 2 glances in 12 s. Reduced motion, no WebGL, context loss/restore, skip mid-morph, scroll to About, menu, Strict Mode dev server checked. Owner review on real hardware pending.

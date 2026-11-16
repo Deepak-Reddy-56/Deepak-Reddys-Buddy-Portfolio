@@ -1,6 +1,5 @@
 import type { Line } from '../../content/dialogue';
 import { TwoTone } from '../ui/TwoTone';
-import { BuddyPlaceholder } from './BuddyPlaceholder';
 import styles from './BuddySeat.module.css';
 
 export type BuddySeatSize = 'hero' | 'inline' | 'menu';
@@ -14,9 +13,9 @@ type BuddySeatProps = {
 };
 
 /**
- * A place reserved for Buddy, with the line he says there. In M1 it renders a
- * CSS placeholder; in M3 the 3D character occupies the same reserved box
- * (`data-buddy-seat`), so layout never shifts when he arrives.
+ * A place reserved for Buddy, with the line he says there. The slot never
+ * renders a character of its own: the single live Buddy is positioned over it
+ * (`data-buddy-seat`), so layout never shifts and no stand-in can appear.
  *
  * - hero:   large, centred, line below
  * - inline: small, line to the right — opens a section
@@ -25,9 +24,8 @@ type BuddySeatProps = {
 export function BuddySeat({ seat, size, line, className }: BuddySeatProps) {
   return (
     <figure className={[styles.seat, styles[size], className].filter(Boolean).join(' ')} data-buddy-seat={seat}>
-      <span className={styles.slot} data-buddy-slot>
-        <BuddyPlaceholder />
-      </span>
+      {/* Reserved space only: the one live Buddy (BuddyStage) is positioned over it. */}
+      <span className={styles.slot} data-buddy-slot aria-hidden="true" />
       <figcaption className={styles.caption}>
         <span className="visually-hidden">Buddy says: </span>
         <TwoTone as="span" lead={line.lead} rest={line.rest} className={styles.line} words />

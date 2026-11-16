@@ -6,6 +6,9 @@
 .slot {
   display: block;
   flex: none;
+  /* Buddy's body proportions (from the reference silhouette). */
+  width: var(--buddy-size);
+  height: calc(var(--buddy-size) * 0.867);
 }
 
 .caption {
@@ -64,25 +67,11 @@
   }
 }
 
-/* ── Introduction hand-off (html[data-intro], set by the intro) ──
-   The hero Buddy stays hidden while the shader draws him, then takes over. */
-.slot {
-  transition: opacity 260ms var(--ease-in-out);
-}
-
-:global(html[data-intro]) .hero .slot {
-  opacity: 0;
-  transition: none;
-}
-
-/* ── 3D Buddy active (html[data-buddy='3d']) ────────────────────
-   Seats become reserved space only; the one 3D Buddy flies between them.
-   A seat's line appears when he lands there and fades when he leaves. */
-:global(html[data-buddy='3d']) .slot > * {
-  visibility: hidden;
-}
-
-:global(html[data-buddy='3d']) .seat:not([data-buddy-active]) [data-word] {
+/* ── Captions follow the live Buddy (html[data-buddy], see buddyHost) ──
+   While Buddy is loading or live, a seat's line appears when he lands there and
+   fades when he leaves. If the live renderer is unavailable, every line shows. */
+:global(html[data-buddy='loading']) .seat:not([data-buddy-active]) [data-word],
+:global(html[data-buddy='live']) .seat:not([data-buddy-active]) [data-word] {
   opacity: 0;
   transform: translateY(4px);
   transition-duration: 220ms;

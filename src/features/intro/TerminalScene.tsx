@@ -6,6 +6,15 @@ export const PROMPT = 'deepak@portfolio:~$';
 export const COMMAND = './start-buddy';
 const OUTPUT = ['→ polishing chrome… done', '→ waking buddy…'];
 
+/** Paper needs WebGL2; without it the window keeps its plain metal background (no uncaught error). */
+const supportsWebGL2 = (() => {
+  try {
+    return !!document.createElement('canvas').getContext('webgl2');
+  } catch {
+    return false;
+  }
+})();
+
 type TerminalSceneProps = {
   typed: number;
   outputLines: number;
@@ -22,7 +31,7 @@ type TerminalSceneProps = {
 /**
  * Scene A — Paper's Liquid Metal fills the terminal window itself.
  * The text stays DOM so it remains crisp, selectable and accessible.
- * The existing intro morph takes over at Run and hands off to the 3D Buddy.
+ * After Run, Buddy's own Liquid Metal surface takes over this exact box and becomes him.
  */
 export function TerminalScene({
   typed,
@@ -42,26 +51,28 @@ export function TerminalScene({
     <div className={styles.scene} data-handed-off={handedOff || undefined} data-fallback-exit={fallbackExit || undefined}>
       <div ref={windowRef} className={styles.window}>
         <div className={styles.metalLayer} aria-hidden="true">
-          <LiquidMetal
-            className={styles.paperShader}
-            width="100%"
-            height="100%"
-            colorBack="#AAAAAC"
-            colorTint="#FFFFFF"
-            shape="none"
-            repetition={2}
-            softness={0.1}
-            shiftRed={0.3}
-            shiftBlue={0.3}
-            distortion={0.07}
-            contour={0.4}
-            angle={70}
-            speed={0.7}
-            scale={1}
-            fit="contain"
-            minPixelRatio={1.25}
-            maxPixelCount={1600000}
-          />
+          {supportsWebGL2 ? (
+            <LiquidMetal
+              className={styles.paperShader}
+              width="100%"
+              height="100%"
+              colorBack="#AAAAAC"
+              colorTint="#FFFFFF"
+              shape="none"
+              repetition={2}
+              softness={0.1}
+              shiftRed={0.3}
+              shiftBlue={0.3}
+              distortion={0.07}
+              contour={0.4}
+              angle={70}
+              speed={0.7}
+              scale={1}
+              fit="contain"
+              minPixelRatio={1.25}
+              maxPixelCount={1600000}
+            />
+          ) : null}
         </div>
 
         <div className={styles.titlebar} aria-hidden="true">

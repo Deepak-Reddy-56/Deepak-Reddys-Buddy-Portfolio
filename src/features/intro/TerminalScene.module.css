@@ -112,8 +112,8 @@
   animation: line-in 220ms var(--ease-out) both;
 }
 
-/* The shader has taken over this exact box; fade only the DOM content. */
-.scene[data-handed-off] .window { opacity: 0; }
+/* Buddy's chrome surface has taken over this exact box: the DOM window fades out over it. */
+.scene[data-handed-off] .window { opacity: 0; transition: opacity 240ms ease; }
 .scene[data-handed-off] .window * {
   opacity: 0;
   transition: opacity 140ms ease;

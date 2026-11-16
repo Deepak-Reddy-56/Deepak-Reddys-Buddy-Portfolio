@@ -15,20 +15,7 @@ import {
   type Seat,
 } from './flight';
 import { collectObstacles, planLeg, pointOnLeg, retime, type Leg } from './route';
-import type { BuddyPose } from './three/buddyModel';
-
-/** What the director needs from a renderer (three.js today; swappable). */
-export interface BuddyView {
-  resize(width: number, height: number): void;
-  place(x: number, y: number, size: number): void;
-  update(dt: number, pose: BuddyPose, talk: number): boolean;
-  render(): void;
-  readonly model: {
-    setExpression(name: ExpressionName): void;
-    setGaze(x: number, y: number): void;
-    setBlink(amount: number): void;
-  };
-}
+import type { BuddyPose, BuddyView } from './types';
 
 /** Flight into / out of the menu sheet: a critically damped spring in screen space. */
 type MenuFlight = { target: 'menu' | 'page'; v: { x: number; y: number; s: number } };
@@ -61,6 +48,7 @@ export class BuddyDirector {
   private viewport = { w: 0, h: 0 };
   private controlsBottom = 0;
 
+  private seatOpacity = 1;
   private J = 0; // journey value Buddy is actually at (follows the scroll's J with a speed limit)
   private jv = 0; // its velocity (legs / s)
   private menuFlight: MenuFlight | null = null;
@@ -76,12 +64,14 @@ export class BuddyDirector {
   private lastWake = 0;
   private activeSeat: string | null = null;
   private arrivedAt = 0;
-  private nextBlinkAt = 2.5; // seconds, director clock
+  private nextBlinkAt = 0; // seconds, wall clock
+  private nextGlanceAt = 0; // idle look-around (seconds, wall clock)
+  private glance = { x: 0, y: 0, until: -1 };
   private blinkStart = -1;
   private pointer: { x: number; y: number; at: number } | null = null;
   private dormant: boolean;
   private time = 0;
-  /** The director's clock (ms) — the FrameLoop's time, used for every internal timer. */
+  /** Wall-clock ms (performance.now), used for every internal timer. */
   private clock = 0;
   private renders = 0;
   private awakeBecause = '';
@@ -90,8 +80,14 @@ export class BuddyDirector {
   private readonly resizeObserver: ResizeObserver;
   private readonly mutationObserver: MutationObserver;
   private readonly hoverCapable = window.matchMedia('(hover: hover)').matches;
+  private readonly reducedMotion: boolean;
 
-  constructor(private readonly view: BuddyView) {
+  constructor(private readonly view: BuddyView, options: { reducedMotion?: boolean } = {}) {
+    this.reducedMotion = options.reducedMotion ?? false;
+    this.clock = performance.now();
+    this.time = this.clock / 1000;
+    this.nextBlinkAt = this.time + 2.5;
+    this.nextGlanceAt = this.time + 3.5;
     this.loop = new FrameLoop((t, dt) => this.tick(t, dt));
     this.dormant = this.introPlaying();
     this.measure();
@@ -149,7 +145,7 @@ export class BuddyDirector {
   // ── events ───────────────────────────────────────────────────
 
   private onScroll = () => {
-    this.lastScrollAt = this.clock;
+    this.lastScrollAt = performance.now();
     this.wake();
   };
 
@@ -164,17 +160,17 @@ export class BuddyDirector {
 
   private onPointer = (event: PointerEvent) => {
     if (!this.hoverCapable || event.pointerType !== 'mouse') return;
-    this.pointer = { x: event.clientX, y: event.clientY, at: this.clock };
+    this.pointer = { x: event.clientX, y: event.clientY, at: performance.now() };
     this.wake();
   };
 
+  /** While the intro runs it owns Buddy (formation, face reveal, settling); the director only watches. */
   private introPlaying(): boolean {
-    const state = document.documentElement.dataset.intro;
-    return state === 'playing' || state === 'leaving';
+    return !!document.documentElement.dataset.intro;
   }
 
   private wake(): void {
-    this.lastWake = this.clock;
+    this.lastWake = performance.now();
     this.loop.start();
   }
 
@@ -292,11 +288,13 @@ export class BuddyDirector {
 
   // ── the tick ─────────────────────────────────────────────────
 
-  private tick(t: number, dtMs: number): void {
-    this.clock = t;
-    const now = t;
+  private tick(_t: number, dtMs: number): void {
+    // Timers run on wall time: the loop's own clock pauses while the director sleeps,
+    // which used to stretch a 3 s blink interval to about a minute.
+    this.clock = performance.now();
+    const now = this.clock;
     const dt = Math.max(dtMs, 1) / 1000;
-    this.time += dt;
+    this.time = this.clock / 1000;
     if (!this.seats.length) this.measure();
     if (!this.seats.length) {
       this.loop.stop();
@@ -324,6 +322,14 @@ export class BuddyDirector {
       this.jv = 0;
     }
     const journey = this.journeyPosition(this.J);
+    // Reduced motion: no flights. Buddy fades out at one seat and in at the next.
+    this.seatOpacity = 1;
+    if (this.reducedMotion && journey.u > 0) {
+      const k = Math.min(Math.floor(this.J), this.seats.length - 1);
+      const seat = seatInViewport(this.seats[journey.u < 0.5 ? k : Math.min(k + 1, this.seats.length - 1)], window.scrollX, window.scrollY);
+      Object.assign(journey, { x: seat.x, y: seat.y, size: seat.size, hop: true });
+      this.seatOpacity = Math.abs(1 - 2 * journey.u);
+    }
 
     // 2. Menu: fly into the sheet's seat (and back) with a screen-space spring.
     const menuSeat = this.menuOpen ? this.menuSeat() : null;
@@ -380,7 +386,7 @@ export class BuddyDirector {
     const idleAge = now - Math.max(this.lastScrollAt, this.arrivedAt, this.pointer?.at ?? 0);
     const bobAmp = seated ? 0.022 * clamp(1 - (idleAge - IDLE_BOB_MS) / 1500, 0, 1) : 0;
 
-    this.pose = {
+    this.pose = this.reducedMotion ? { bank: 0, pitch: 0, yaw: 0, stretch: 1, bob: 0, flying: 0 } : {
       bank: clamp(-this.vel.x * 0.0007, -bankMax, bankMax),
       pitch: clamp(this.vel.y * 0.00035, -0.3, 0.3),
       yaw: clamp(this.vel.x * 0.0004, -0.35, 0.35),
@@ -390,14 +396,18 @@ export class BuddyDirector {
     };
 
     // 4. Dialogue + expression: only when he has landed and the visitor has paused.
+    //    (A seat he is still sitting on stays active through scroll noise, e.g. the
+    //    scroll-lock release at the end of the intro.) While the intro owns Buddy,
+    //    it decides when his first line appears.
     let seatId: string | null = null;
     if (wantMenu && !this.menuFlight) seatId = 'menu';
-    else if (seated && now - this.lastScrollAt > SCROLL_SETTLE_MS) {
+    else if (seated) {
       const k = Math.round(this.J);
-      if (Math.abs(this.J - k) < 0.002) seatId = this.seats[k]?.id ?? null;
+      const id = Math.abs(this.J - k) < 0.002 ? (this.seats[k]?.id ?? null) : null;
+      if (id && (id === this.activeSeat || now - this.lastScrollAt > SCROLL_SETTLE_MS)) seatId = id;
     }
-    if (this.dormant && (document.documentElement.dataset.intro === 'leaving' || document.documentElement.dataset.intro === 'handoff')) seatId = this.seats[0]?.id ?? null;
     if (!seated && !wantMenu) seatId = null;
+    if (this.dormant) seatId = this.activeSeat ?? this.seatElementActive();
     if (seatId !== this.activeSeat) this.activate(seatId, now);
 
     // 5. Face: gaze, blink, expression.
@@ -405,11 +415,13 @@ export class BuddyDirector {
     this.updateBlink();
     this.view.model.setExpression(this.menuFlight || flying > 0.15 ? 'flying' : this.expressionFor(this.activeSeat));
 
-    // 6. Draw (unless the intro is still on screen).
+    // 6. Draw — never while the intro owns Buddy (it places him itself, and hands
+    //    him over exactly at the hero seat this director would put him in).
     const talk = buddyVoice.talk(performance.now()); // speech runs on wall time
-    const easing = this.view.update(dt, this.pose, talk);
-    this.view.place(this.pos.x, this.pos.y, this.pos.size);
+    let easing = false;
     if (!this.dormant) {
+      easing = this.view.update(dt, this.pose, talk);
+      this.view.place(this.pos.x, this.pos.y, this.pos.size, this.seatOpacity);
       this.view.render();
       this.renders++;
     }
@@ -431,8 +443,10 @@ export class BuddyDirector {
     if (this.awakeBecause === '' || this.dormant) {
       this.loop.stop();
       window.clearTimeout(this.wakeTimer);
-      // Wake for the next blink (alive without rendering every frame).
-      this.wakeTimer = window.setTimeout(() => this.wake(), Math.max(200, (this.nextBlinkAt - this.time) * 1000));
+      // Wake for the next blink or glance (alive without rendering every frame).
+      const glanceEvent = this.time < this.glance.until ? this.glance.until : this.nextGlanceAt;
+      const next = Math.min(this.nextBlinkAt, this.reducedMotion ? Infinity : glanceEvent);
+      this.wakeTimer = window.setTimeout(() => this.wake(), Math.max(200, (next - this.time) * 1000));
     }
   }
 
@@ -443,6 +457,11 @@ export class BuddyDirector {
       this.seatElement(seatId)?.setAttribute('data-buddy-active', '');
       this.arrivedAt = now;
     }
+  }
+
+  /** A seat the intro activated before the director took over. */
+  private seatElementActive(): string | null {
+    return document.querySelector<HTMLElement>('[data-buddy-seat][data-buddy-active]')?.dataset.buddySeat ?? null;
   }
 
   private expressionFor(seatId: string | null): ExpressionName {
@@ -465,6 +484,18 @@ export class BuddyDirector {
       const dy = (this.pos.y - this.pointer.y) / (this.viewport.h * 0.5);
       this.view.model.setGaze(dx, dy);
       return;
+    }
+    // Left alone, he looks around now and then.
+    if (!this.reducedMotion) {
+      if (this.time >= this.nextGlanceAt) {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        this.glance = { x: side * (0.55 + Math.random() * 0.4), y: (Math.random() - 0.35) * 0.5, until: this.time + 0.7 + Math.random() * 0.6 };
+        this.nextGlanceAt = this.time + 3.5 + Math.random() * 4;
+      }
+      if (this.time < this.glance.until) {
+        this.view.model.setGaze(this.glance.x, this.glance.y);
+        return;
+      }
     }
     this.view.model.setGaze(0, 0); // at the visitor
   }
