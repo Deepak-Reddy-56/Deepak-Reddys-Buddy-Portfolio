@@ -227,6 +227,16 @@ export function spokenAt(line: BuddyLine, fraction: number): number {
   return (t / rate) * 1000 + pauses.filter((p) => p.at < t).reduce((sum, p) => sum + p.ms, 0);
 }
 
+const DEBUG = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('buddyDebug');
+
+/** Keep the voice's pitch when slowed (prefixed in older Safari / Firefox). */
+function setPreservesPitch(audio: HTMLAudioElement): void {
+  const el = audio as HTMLAudioElement & { webkitPreservesPitch?: boolean; mozPreservesPitch?: boolean };
+  el.preservesPitch = true;
+  if ('webkitPreservesPitch' in el) el.webkitPreservesPitch = true;
+  if ('mozPreservesPitch' in el) el.mozPreservesPitch = true;
+}
+
 type ActiveLine = {
   line: BuddyLine;
   pacing: Pacing;
@@ -341,6 +351,8 @@ class BuddyVoice {
             if (entry.audio) void entry.audio.play().catch(() => (entry.audio = null));
           }
         } else {
+          // Some browsers reset the rate when a clip (re)loads; keep it pinned.
+          if (entry.audio && entry.audio.playbackRate !== pacing.rate) entry.audio.playbackRate = pacing.rate;
           if (entry.audio && !entry.audio.paused) entry.media = entry.audio.currentTime;
           else if (!entry.audio) entry.media += dt * pacing.rate;
           const pause = pacing.pauses[entry.next];
@@ -358,8 +370,13 @@ class BuddyVoice {
 
       if (audio) {
         audio.currentTime = 0;
+        audio.defaultPlaybackRate = pacing.rate;
         audio.playbackRate = pacing.rate;
-        audio.preservesPitch = true;
+        setPreservesPitch(audio);
+        audio.onplaying = () => {
+          if (audio.playbackRate !== pacing.rate) audio.playbackRate = pacing.rate;
+          if (DEBUG) console.info(`[buddy voice] ${line.id}: rate ${audio.playbackRate} (target ${pacing.rate}), ${pacing.pauses.length} beats`);
+        };
         audio.onended = finish;
         audio.play().then(
           () => {
