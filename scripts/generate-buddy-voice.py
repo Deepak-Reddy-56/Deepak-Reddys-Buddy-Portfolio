@@ -17,6 +17,8 @@ Two voices, same output:
       #   --rate        intro lines ("Hey, I'm Buddy!")      default 0.9
       #   --joke-rate   jokes, Deepak lines, quips          default 0.8
       # Real pauses (SSML <break>) are put after sentences and commas.
+      # Each line is then measured and re-generated until it lands near a natural
+      # pace (--target-wpm, default 150 words per minute; 0 turns this off).
 
   Kokoro (open source, Apache-2.0, offline; the default):
       pip install kokoro-onnx soundfile numpy
@@ -53,7 +55,26 @@ parser.add_argument('--pause', type=int, default=420, help='ms of silence after 
 parser.add_argument('--model', default='simba-3.5', help='speechify model id')
 parser.add_argument('--models', default=str(Path(__file__).resolve().parent), help='kokoro model folder')
 parser.add_argument('--only', nargs='*', default=None, help='regenerate only these line ids')
+parser.add_argument('--preview', nargs='?', const='deepak-best', default=None,
+                    help='audition one line (id or text) in several voices/rates into voice-previews/; site files untouched')
+parser.add_argument('--voices', nargs='*', default=None, help='with --preview: voice ids to compare')
+parser.add_argument('--rates', nargs='*', type=float, default=None, help='with --preview: rates to compare (e.g. 0.7 0.8 0.9)')
+parser.add_argument('--target-wpm', type=float, default=150,
+                    help='auto-pace each line to this many words per minute (natural speech ~150); 0 = use the rates as given')
+parser.add_argument('--list-voices', action='store_true', help='speechify: list available English voices and exit')
 args = parser.parse_args()
+
+# A natural, easy-to-follow conversational pace is about 140-160 words per minute.
+NATURAL_WPM = (130, 165)
+
+
+def wpm(text: str, seconds: float) -> int:
+    return round(len(text.split()) / max(seconds, 0.01) * 60)
+
+
+def pace_note(value: int) -> str:
+    lo, hi = NATURAL_WPM
+    return 'too fast' if value > hi else 'slow' if value < lo else 'natural'
 
 
 def find_ffmpeg() -> str:
@@ -138,14 +159,69 @@ def trim(mp3: Path) -> np.ndarray:
     return trimmed
 
 
+def speak(text: str, out: Path, group: str) -> None:
+    (speak_speechify if args.provider == 'speechify' else speak_kokoro)(text, out, group)
+
+
+if args.list_voices:
+    key = os.environ.get('SPEECHIFY_API_KEY') or sys.exit('Set SPEECHIFY_API_KEY first.')
+    request = urllib.request.Request('https://api.speechify.ai/v1/voices', headers={'Authorization': f'Bearer {key}'})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        voices = json.loads(response.read())
+    for v in voices if isinstance(voices, list) else voices.get('voices', []):
+        locale = v.get('locale') or ','.join(m.get('locale', '') for m in v.get('models', [{}])[0].get('languages', []) if isinstance(m, dict))
+        if 'en' not in str(locale).lower() and 'en' not in json.dumps(v).lower()[:400]:
+            continue
+        print(f"{v.get('id', '?'):24} {v.get('display_name', v.get('name', '')):20} {v.get('gender', ''):8} {locale}")
+    sys.exit(0)
+
+if args.preview:
+    # Audition: same line, several voices and rates. Listen, pick, then generate for real.
+    text = LINES[args.preview]['text'] if args.preview in LINES else args.preview
+    group = LINES[args.preview]['group'] if args.preview in LINES else 'deepak'
+    folder = ROOT / 'voice-previews'
+    folder.mkdir(exist_ok=True)
+    voices = args.voices or [args.voice]
+    rates = args.rates or [rate_for(group)]
+    for voice in voices:
+        for rate in rates:
+            args.voice, args.rate, args.joke_rate = voice, rate, rate
+            out = folder / f'{voice}_{rate:.2f}.mp3'
+            speak(text, out, group)
+            pcm = trim(out)
+            value = wpm(text, len(pcm) / SR)
+            print(f'{out.name:32} {value:4d} wpm  ({pace_note(value)})')
+    print(f'\nListen in {folder} — natural speech is about {NATURAL_WPM[0]}-{NATURAL_WPM[1]} words per minute.')
+    sys.exit(0)
+
+def generate_paced(text: str, mp3: Path, group: str) -> tuple[np.ndarray, float]:
+    """Generate a line; with --target-wpm, re-generate at an adjusted rate until it lands near that pace.
+
+    TTS voices read quickly; the right rate differs per voice and per line, so it is
+    measured rather than guessed (at most three takes per line)."""
+    rate = rate_for(group)
+    target = args.target_wpm if group != 'intro' else args.target_wpm * 1.07
+    for attempt in range(3):
+        args.rate = args.joke_rate = rate
+        speak(text, mp3, group)
+        pcm = trim(mp3)
+        value = wpm(text, len(pcm) / SR)
+        if not args.target_wpm or abs(value - target) <= target * 0.06:
+            break
+        rate = min(1.3, max(0.45, rate * target / value))
+    return pcm, rate
+
+
 OUT.mkdir(parents=True, exist_ok=True)
+base_rate, base_joke_rate = args.rate, args.joke_rate
 for key, line in LINES.items():
     mp3 = OUT / f'{key}.mp3'
     if args.only and key not in args.only and mp3.exists():
         continue
-    (speak_speechify if args.provider == 'speechify' else speak_kokoro)(line['text'], mp3, line['group'])
-    trim(mp3)
-    print(key, 'ok')
+    args.rate, args.joke_rate = base_rate, base_joke_rate
+    pcm, used = generate_paced(line['text'], mp3, line['group'])
+    value = wpm(line['text'], len(pcm) / SR)
+    print(f'{key:20} {value:4d} wpm  rate {used:.2f}  ({pace_note(value)})')
 
 # Rebuild the TypeScript index from every MP3 (so a partial --only run stays consistent).
 entries = []

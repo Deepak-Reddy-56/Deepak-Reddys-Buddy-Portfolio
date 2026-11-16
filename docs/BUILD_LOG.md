@@ -535,3 +535,11 @@ Reference: the owner's recording of adamperlis.com (clicking Buddy).
 
 - **Hard hat** redrawn to match the reference: a plain flat-yellow half dome, a thin lip of a brim and a small stalk on top, with no gloss or rib. It tips more as he turns (±14°).
 - **Voice pace** slowed for clarity. Generator defaults are now `--rate 0.9` (intro), `--joke-rate 0.8` (jokes, Deepak lines, quips) and `--pause 420` ms after sentences. Synthetic (not yet recorded) lines also run at a slower, easier pace with longer sentence gaps.
+
+## Voice: auto-paced to natural speech
+
+- TTS voices read quickly. Kokoro measured 223 words per minute at rate 1.0 and still 176 at 0.8, while natural conversational speech is about 140–160 wpm. The right rate differs per voice and per line, so the generator now measures it.
+- `generate-buddy-voice.py` generates each line, measures its pace (pauses included) and re-generates at an adjusted rate until it lands near `--target-wpm`. The default is 150, or about 160 for the intro lines, with at most three takes per line. It prints each line's wpm and the rate used. `--target-wpm 0` turns this off.
+- `--preview [id|text] --voices … --rates …` auditions one line in several voices and rates into `voice-previews/` (gitignored), with a wpm readout. Site files are untouched.
+- `--list-voices` (Speechify) lists the available English voices.
+- Kokoro test: lines land at 144–164 wpm with rates of 0.62–0.91.
