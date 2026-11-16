@@ -496,7 +496,7 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 
 ## Buddy pacing: jokes and Deepak intro
 
-- Jokes and the Deepak lines play at 0.86× (intro lines stay at 0.9×).
+- Jokes and the Deepak lines play at 0.65× (intro lines stay at 0.9×); was 0.86×.
 - Buddy now holds a beat at punctuation: ~380 ms after a sentence, ~460 ms on "...", ~170 ms at a comma or colon. Each mark's position is mapped onto the recording and snapped to a real silence in the envelope; the audio pauses and the mouth closes during the beat. The same clock drives silent (sound-off) playback.
 - Longer gaps between lines (after "Hey, I'm Buddy!", before turning to Deepak, before the Deepak joke). The look at the name tag now lands on the beat before "He built me."
 - Measured: self joke ~3.1 s → ~3.75 s, Deepak joke ~4.2 s → ~5.0 s.

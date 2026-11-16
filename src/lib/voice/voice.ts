@@ -144,7 +144,7 @@ class SpeechSynthesisVoiceProvider implements VoiceProvider {
  * slower so they land. Works with whichever audio was generated (Kokoro or Speechify).
  */
 export const SPEECH_RATE = 0.9;
-const JOKE_RATE = 0.86;
+const JOKE_RATE = 0.65;
 
 /** Extra beats held at punctuation, in ms (the recordings' own pauses are short). */
 const HOLD_MS = { sentence: 380, ellipsis: 460, minor: 170 } as const;
