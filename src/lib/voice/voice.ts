@@ -296,7 +296,7 @@ class BuddyVoice {
   /** Fetch line audio ahead of time (call at the start of the intro). */
   preload(lines: readonly BuddyLine[]): void {
     for (const line of lines) {
-      if (this.clips.has(line.src)) continue;
+      if (!line.src || this.clips.has(line.src)) continue;
       const audio = new Audio();
       audio.preload = 'auto';
       audio.src = line.src;
@@ -323,7 +323,8 @@ class BuddyVoice {
         if (this.active?.finish === finish) this.active = null;
         resolve();
       };
-      const audio = soundEngine.isEnabled ? (this.clips.get(line.src) ?? new Audio(line.src)) : null;
+      // Lines without a recording (src '') run silently on their own timeline.
+      const audio = soundEngine.isEnabled && line.src ? (this.clips.get(line.src) ?? new Audio(line.src)) : null;
       const entry: ActiveLine = {
         line,
         pacing,

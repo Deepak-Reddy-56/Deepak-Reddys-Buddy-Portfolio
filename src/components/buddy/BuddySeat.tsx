@@ -1,4 +1,5 @@
 import type { Line } from '../../content/dialogue';
+import { useBuddyQuip } from '../../features/buddy/buddyQuip';
 import { SpokenLine } from '../ui/SpokenLine';
 import { TwoTone } from '../ui/TwoTone';
 import styles from './BuddySeat.module.css';
@@ -26,6 +27,7 @@ type BuddySeatProps = {
  * - menu:   small, inside the menu sheet
  */
 export function BuddySeat({ seat, size, line, className, spoken = false }: BuddySeatProps) {
+  const quip = useBuddyQuip(seat);
   return (
     <figure className={[styles.seat, styles[size], className].filter(Boolean).join(' ')} data-buddy-seat={seat}>
       {/* Reserved space only: the one live Buddy (BuddyStage) is positioned over it. */}
@@ -33,7 +35,10 @@ export function BuddySeat({ seat, size, line, className, spoken = false }: Buddy
       <figcaption className={styles.caption}>
         <span className="visually-hidden">Buddy says: </span>
         {/* Keyed by text, so a new line (Buddy speaking) reveals word by word again. */}
-        {spoken ? (
+        {quip ? (
+          // Something he's saying right now (outfit change, "you're back"…): darkens word by word with his voice.
+          <SpokenLine key={'quip-' + quip.key} line={quip.line} mode="voice" className={styles.line} />
+        ) : spoken ? (
           <SpokenLine key={line.lead + '|' + (line.rest ?? '')} line={line} mode="timed" className={styles.line} />
         ) : (
           <TwoTone key={line.lead + '|' + (line.rest ?? '')} as="span" lead={line.lead} rest={line.rest} className={styles.line} words />

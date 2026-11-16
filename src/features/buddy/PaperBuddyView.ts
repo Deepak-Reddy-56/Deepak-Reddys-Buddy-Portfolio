@@ -1,4 +1,5 @@
 import { getShaderColorFromString, ShaderFitOptions, ShaderMount, toProcessedLiquidMetal } from '@paper-design/shaders';
+import { buildAccessory, svg, type AccessoryName, type AccessoryParts } from './buddyAccessories';
 import { buddyFace as F } from './buddyFace';
 import { buddyGeometry as G } from './buddyGeometry';
 import { buddyLook, buddyMaterial as M, mixLook, terminalLook, type LiquidLook } from './buddyMaterial';
@@ -129,6 +130,19 @@ export class PaperBuddyView implements BuddyView {
   /** Smoothed mouth opening (fast to open, a little slower to close — like real speech). */
   private mouthOpen = 0;
   private faceReveal = 1;
+  /** Eyes held shut (dozing), 0..1. */
+  private sleep = 0;
+  /** Outfit: the one being worn, and one waiting for the middle of a twirl. */
+  private accessory: AccessoryName = 'none';
+  private accessoryParts: AccessoryParts | null = null;
+  private pendingAccessory: AccessoryName | null = null;
+  /** A full turn (costume change): seconds elapsed, or -1 when not twirling. */
+  private twirl = -1;
+  /** Pop-in of a new outfit (0 → 1). */
+  private accessoryIn = 1;
+  private defs!: SVGDefsElement;
+  private accessoryLayer!: SVGGElement;
+  private readonly uid = Math.random().toString(36).slice(2, 8);
   private form = 1;
   private box: MorphBox | null = null;
   private look: LiquidLook = buddyLook;
@@ -159,6 +173,7 @@ export class PaperBuddyView implements BuddyView {
     clip.setAttribute('id', clipId);
     clip.append(ellipse(HEAD.cx, HEAD.cy, HEAD.rx * 0.985, HEAD.ry * 0.985, 0, '#000'));
     defs.append(clip);
+    this.defs = defs;
     this.faceGroup = el('g');
     this.faceGroup.setAttribute('clip-path', `url(#${clipId})`);
     this.face.append(defs, this.faceGroup);
@@ -182,6 +197,9 @@ export class PaperBuddyView implements BuddyView {
     this.smile.setAttribute('stroke-width', String(F.smileWidth));
     this.smile.setAttribute('stroke-linecap', 'round');
     this.faceGroup.append(this.smile);
+    // Outfits sit over the head and are not clipped (hats stick out above it).
+    this.accessoryLayer = svg('g', { 'data-part': 'accessories' });
+    this.face.append(this.accessoryLayer);
 
     this.ready = new Promise<void>((resolve, reject) => {
       this.resolveReady = resolve;
@@ -355,6 +373,7 @@ export class PaperBuddyView implements BuddyView {
     if (Math.abs(gx) + Math.abs(gy) > 0.004) changing = true;
     this.gaze.x += gx * kg;
     this.gaze.y += gy * kg;
+    if (this.stepTwirl(dt)) changing = true;
     if (this.stepHead(dt)) changing = true;
     this.drawFace();
     this.applyTransform();
@@ -379,6 +398,72 @@ export class PaperBuddyView implements BuddyView {
   }
 
   /** Turn his head by an extra amount (radians), e.g. away from the visitor as he flies off. */
+  /**
+   * Change outfit. With `twirl`, he spins right round and the new outfit is on
+   * when his face comes back (the swap happens while his back is turned).
+   */
+  setAccessory(name: AccessoryName, twirl = true): void {
+    if (twirl && !this.reducedMotion) {
+      this.pendingAccessory = name;
+      this.twirl = 0;
+      return;
+    }
+    this.applyAccessory(name);
+  }
+
+  get currentAccessory(): AccessoryName {
+    return this.pendingAccessory ?? this.accessory;
+  }
+
+  get twirling(): boolean {
+    return this.twirl >= 0;
+  }
+
+  /** Hold his eyes shut (dozing). */
+  setSleep(amount: number): void {
+    this.sleep = clamp(amount, 0, 1);
+    this.drawFace();
+  }
+
+  private applyAccessory(name: AccessoryName): void {
+    this.accessory = name;
+    this.accessoryParts?.root.remove();
+    this.accessoryParts = null;
+    this.defs.querySelectorAll('[data-outfit]').forEach((node) => node.remove());
+    if (name !== 'none') {
+      const before = this.defs.childElementCount;
+      this.accessoryParts = buildAccessory(name, HEAD, this.defs, this.uid);
+      Array.from(this.defs.children).slice(before).forEach((node) => node.setAttribute('data-outfit', ''));
+      this.accessoryLayer.append(this.accessoryParts.root);
+    }
+    this.accessoryIn = this.reducedMotion ? 1 : 0;
+    this.drawFace();
+  }
+
+  /** Twirl: one full turn in 0.9 s; the outfit swaps at the half-way point. */
+  private stepTwirl(dt: number): boolean {
+    let busy = this.accessoryIn < 1;
+    if (busy) this.accessoryIn = Math.min(1, this.accessoryIn + dt / 0.45);
+    if (this.twirl < 0) return busy;
+    const T = 0.9;
+    this.twirl += dt;
+    const u = Math.min(1, this.twirl / T);
+    const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+    this.spin = Math.PI * 2 * e;
+    if (u >= 0.5 && this.pendingAccessory !== null) {
+      this.applyAccessory(this.pendingAccessory);
+      this.pendingAccessory = null;
+    }
+    if (u >= 1) {
+      // Back to facing forward: drop the full turn from both target and head.
+      this.twirl = -1;
+      this.spin = 0;
+      this.yaw.x -= Math.PI * 2;
+    }
+    busy = true;
+    return busy;
+  }
+
   setSpin(radians: number): void {
     this.spin = radians;
   }
@@ -506,7 +591,7 @@ export class PaperBuddyView implements BuddyView {
     const smileIn = smooth(0.5, 1, r);
     // He wakes up: the eyes appear closed and open as the reveal completes.
     const asleep = 1 - smooth(0.55, 0.9, r);
-    const blink = 1 - 0.93 * Math.max(this.blink, asleep);
+    const blink = 1 - 0.93 * Math.max(this.blink, asleep, this.sleep);
     const lift = -e.eyeLift * G.height;
     const yaw = this.yaw.x;
     const pitch = this.pitch.x;
@@ -571,6 +656,7 @@ export class PaperBuddyView implements BuddyView {
     const f = (pt: Pt) => `${pt[0].toFixed(2)} ${pt[1].toFixed(2)}`;
     this.smile.setAttribute('d', `M${f(A)} C${f(u1)} ${f(u2)} ${f(B)} C${f(d1)} ${f(d2)} ${f(A)} Z`);
     this.smile.style.opacity = fade(C.z).toFixed(3);
+    this.drawAccessory(yaw, pitch, leadX, leadY, lift, fade);
     // Drawn in during the facial reveal; afterwards fully visible.
     if (smileIn < 1) {
       const length = this.smile.getTotalLength();
@@ -581,6 +667,64 @@ export class PaperBuddyView implements BuddyView {
       this.smile.style.strokeDasharray = '';
       this.smile.style.strokeDashoffset = '';
       this.smile.style.fillOpacity = '1';
+    }
+  }
+
+  /** Place the outfit's pieces on the turned head. */
+  private drawAccessory(yaw: number, pitch: number, leadX: number, leadY: number, lift: number, fade: (z: number) => number): void {
+    const parts = this.accessoryParts;
+    const shades = this.accessory === 'shades';
+    // Sunglasses replace the eyes.
+    this.eyes.forEach((eye) => {
+      eye.group.style.visibility = shades ? 'hidden' : '';
+    });
+    if (!parts) return;
+    const k = this.accessoryIn;
+    const popIn = pop(k);
+    // Pieces on top of the head: the crown barely moves as he turns; they lean a little with him.
+    const topShift = Math.sin(yaw) * HEAD.rx * 0.16;
+    const topLift = -Math.sin(pitch) * HEAD.ry * 0.1;
+    const tilt = (Math.sin(yaw) * 9 - 6 * (this.accessory === 'tie' ? 1 : 0)).toFixed(2);
+    parts.top.setAttribute(
+      'transform',
+      `translate(${(topShift).toFixed(2)} ${(topLift - (1 - popIn) * 40).toFixed(2)}) rotate(${tilt} ${HEAD.cx} ${HEAD.cy - HEAD.ry}) translate(${HEAD.cx} ${HEAD.cy - HEAD.ry}) scale(${popIn.toFixed(3)}) translate(${-HEAD.cx} ${-(HEAD.cy - HEAD.ry)})`,
+    );
+    parts.top.style.opacity = String(Math.min(1, k * 3));
+    // Bow tie: under the chin, turning with the front of the body.
+    const chin = projectOnHead(HEAD.cx, HEAD.cy + HEAD.ry * 0.86, yaw, pitch * 0.4);
+    const chinX = chin.x - HEAD.cx;
+    parts.chin.setAttribute('transform', `translate(${chinX.toFixed(2)} 0) translate(${HEAD.cx} ${HEAD.cy + HEAD.ry}) scale(${(chin.fx * popIn).toFixed(3)} ${popIn.toFixed(3)}) translate(${-HEAD.cx} ${-(HEAD.cy + HEAD.ry)})`);
+    parts.chin.style.opacity = fade(chin.z).toFixed(3);
+    if (shades) {
+      // Cups on the sides of the head (the far one disappears behind him), joined by the band.
+      const side = (dir: -1 | 1) => {
+        const a = dir * Math.PI * 0.5 + yaw;
+        return { x: HEAD.cx + Math.sin(a) * HEAD.rx * 1.02, z: Math.cos(a), w: Math.max(0.35, Math.abs(Math.sin(a))) };
+      };
+      const L = side(-1);
+      const R = side(1);
+      const cupY = HEAD.cy - HEAD.ry * 0.12 + topLift * 0.5;
+      [L, R].forEach((c, i) => {
+        parts.cups[i].setAttribute('transform', `translate(${c.x.toFixed(2)} ${cupY.toFixed(2)}) scale(${(popIn * (0.55 + 0.45 * c.w)).toFixed(3)} ${popIn.toFixed(3)})`);
+        parts.cups[i].style.opacity = c.z < -0.25 ? '0' : '1';
+      });
+      // The band hugs the top of the head, just clear of it.
+      const topY = HEAD.cy - HEAD.ry * 1.06 + topLift;
+      const ctrlX = HEAD.cx + topShift * 1.2;
+      const span = (R.x - L.x) / 2;
+      parts.band.setAttribute('d', `M${L.x.toFixed(2)} ${(cupY - 34).toFixed(2)} C${(L.x - 4).toFixed(2)} ${(topY + 40).toFixed(2)} ${(ctrlX - span * 0.62).toFixed(2)} ${topY.toFixed(2)} ${ctrlX.toFixed(2)} ${topY.toFixed(2)} S${(R.x + 4).toFixed(2)} ${(topY + 40).toFixed(2)} ${R.x.toFixed(2)} ${(cupY - 34).toFixed(2)}`);
+      parts.band.style.opacity = String(Math.min(1, k * 3));
+      // Lenses over the eyes, foreshortened with them.
+      const centres = this.eyes.map((eye) => projectOnHead(eye.cx, eye.cy + 6, yaw, pitch));
+      centres.forEach((p, i) => {
+        const s = popIn * 1.05;
+        parts.lenses[i].setAttribute('transform', `translate(${(p.x + leadX * 0.4).toFixed(2)} ${(p.y + leadY * 0.4 + lift).toFixed(2)}) scale(${(p.fx * s).toFixed(3)} ${(p.fy * s).toFixed(3)})`);
+        parts.lenses[i].style.opacity = fade(p.z).toFixed(3);
+      });
+      const [a, b] = centres;
+      const mid = { x: (a.x + b.x) / 2 + leadX * 0.4, y: (a.y + b.y) / 2 + lift + leadY * 0.4 - 22 };
+      parts.bridge.setAttribute('d', `M${(a.x + 40 * a.fx + leadX * 0.4).toFixed(2)} ${(mid.y + 4).toFixed(2)} Q${mid.x.toFixed(2)} ${(mid.y - 6).toFixed(2)} ${(b.x - 40 * b.fx + leadX * 0.4).toFixed(2)} ${(mid.y + 4).toFixed(2)}`);
+      parts.bridge.style.opacity = (Math.min(fade(a.z), fade(b.z)) * Math.min(1, k * 3)).toFixed(3);
     }
   }
 }

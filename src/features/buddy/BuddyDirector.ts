@@ -2,6 +2,7 @@ import { seatExpressions } from '../../content/dialogue';
 import { FrameLoop } from '../../lib/frameLoop';
 import { buddyVoice } from '../../lib/voice/voice';
 import type { ExpressionName } from './expressions';
+import { BuddyPersonality } from './BuddyPersonality';
 import {
   desktopFlight,
   journeyAt,
@@ -71,6 +72,9 @@ export class BuddyDirector {
   private glance = { x: 0, y: 0, until: -1 };
   private blinkStart = -1;
   private pointer: { x: number; y: number; at: number } | null = null;
+  private personality!: BuddyPersonality;
+  /** Sitting at a seat this frame (not flying). */
+  private seatedNow = false;
   private dormant: boolean;
   private time = 0;
   /** Wall-clock ms (performance.now), used for every internal timer. */
@@ -99,6 +103,8 @@ export class BuddyDirector {
     window.addEventListener('scroll', this.onScroll, { passive: true });
     window.addEventListener('resize', this.onResize);
     window.addEventListener('pointermove', this.onPointer, { passive: true });
+    window.addEventListener('click', this.onClick);
+    this.personality = new BuddyPersonality({ activeSeat: () => (this.seatedNow ? this.activeSeat : null), wake: () => this.wake() });
     this.resizeObserver = new ResizeObserver(() => this.onResize());
     this.resizeObserver.observe(document.body);
     this.mutationObserver = new MutationObserver(() => {
@@ -106,7 +112,10 @@ export class BuddyDirector {
       this.dormant = this.introPlaying();
       // The intro has just handed Buddy over in his seat: continue from there, never
       // from stale state (e.g. a seat further down the page before a replay).
-      if (wasDormant && !this.dormant) this.snapToScroll();
+      if (wasDormant && !this.dormant) {
+        this.snapToScroll();
+        this.personality.onSeat(this.activeSeat); // the "linger" clock starts once the visit really begins
+      }
       this.wake();
     });
     this.mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-intro'] });
@@ -139,6 +148,9 @@ export class BuddyDirector {
     window.removeEventListener('scroll', this.onScroll);
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('pointermove', this.onPointer);
+    window.removeEventListener('click', this.onClick);
+    this.personality.dispose();
+    delete document.documentElement.dataset.buddyHover;
     this.resizeObserver.disconnect();
     this.mutationObserver.disconnect();
     this.seatEls.forEach((el) => el.removeAttribute('data-buddy-active'));
@@ -175,6 +187,13 @@ export class BuddyDirector {
       this.measure();
       this.wake();
     }, 120);
+  };
+
+  /** A click on Buddy (he is pointer-transparent, so hit-test his body). */
+  private onClick = (event: MouseEvent) => {
+    if (this.dormant || !this.seatedNow || this.activeSeat === 'menu') return;
+    if (Math.hypot(event.clientX - this.pos.x, event.clientY - this.pos.y) > this.pos.size * 0.62) return;
+    this.personality.click();
   };
 
   private onPointer = (event: PointerEvent) => {
@@ -428,6 +447,12 @@ export class BuddyDirector {
     if (!seated && !wantMenu) seatId = null;
     if (this.dormant) seatId = this.activeSeat ?? this.seatElementActive();
     if (seatId !== this.activeSeat) this.activate(seatId, now);
+    this.seatedNow = seated && !this.dormant;
+    const hover = this.pointerOnHim(now, seated) && !this.dormant && this.activeSeat !== 'menu';
+    if (hover !== !!document.documentElement.dataset.buddyHover) {
+      if (hover) document.documentElement.dataset.buddyHover = '';
+      else delete document.documentElement.dataset.buddyHover;
+    }
 
     // 5. Face: gaze, blink, expression.
     this.updateGaze(now, seated, flying);
@@ -474,6 +499,7 @@ export class BuddyDirector {
   private activate(seatId: string | null, now: number): void {
     if (this.activeSeat) this.seatElement(this.activeSeat)?.removeAttribute('data-buddy-active');
     this.activeSeat = seatId;
+    this.personality?.onSeat(seatId);
     if (seatId) {
       this.seatElement(seatId)?.setAttribute('data-buddy-active', '');
       this.arrivedAt = now;

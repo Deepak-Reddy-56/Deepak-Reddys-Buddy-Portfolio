@@ -511,3 +511,12 @@ Reference: the owner's screen recording of adamperlis.com (intro → hero).
 - **Choreography:** the terminal becomes Buddy in the middle of the screen (`[data-intro-slot]`), and he talks there with a karaoke caption below him (`SpokenLine`: grey words turn ink as they are spoken). When he introduces Deepak, the profile (top-left) and the navbar pop in, and he turns right round to look at the photo, then the tag. After the joke he turns away and flies in an arc to his corner (top-right, line to his left). The bio and stats come in (`html[data-details]`), the stats stagger and numbers count up, and his resting line writes itself in.
 - **Hero layout:** profile is photo plus "Hello, I'm Deepak. / I'm a software developer." with no pill. The bio has a chrome Contact pill (its highlight follows the pointer) and "See the work →". The centre of the hero is left open for a future feature.
 - QA: regression suite passes (reduced motion, no WebGL, context loss/restore, About seat, menu, Strict Mode dev, idle blinks/glances); no layout overlaps at 1280/1920/820/390.
+
+## Buddy's personalities (outfits) and situational lines
+
+Reference: the owner's recording of adamperlis.com (clicking Buddy).
+
+- **Outfits on click:** clicking Buddy (wherever he is seated, except the menu) cycles: none → black tie (top hat + bow tie) → shades & headphones → hard hat → none. He twirls a full turn (0.9 s); the outfit swaps while his back is turned and pops in as he faces you again, then he says its line. The outfit stays on as he moves around the page. The pointer becomes a hand over him. Pieces are SVG (`buddyAccessories.ts`) and follow the turning head: hats lean and shift, the bow tie turns with the front of the body, the far headphone cup disappears behind him, and the sunglasses replace his eyes and foreshorten with them.
+- **"Oh! You're back!":** after the tab or window has been away for 20 s or more, his eyes are shut when you return; after a beat they open and he denies napping.
+- **"Ahem. The page keeps going.":** once per visit, after a minute on the home screen (the clock starts when the intro ends or when he arrives at the hero).
+- Lines live in `src/content/buddyQuips.ts` and in `scripts/buddy-lines.json` (group `quip`), so recordings can be generated. Until a recording exists, a line runs on a silent synthetic timeline: the mouth moves and the karaoke caption darkens in step, with no sound. A line replaces the seat's resting line until he leaves that seat.

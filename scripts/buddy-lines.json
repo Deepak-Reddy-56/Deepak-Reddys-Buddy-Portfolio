@@ -18,5 +18,11 @@
   "deepak-talks": { "group": "deepak", "text": "Fun fact: I'm the only project of his that talks back.", "caption": { "lead": "Fun fact:", "rest": "I’m the only project of his that talks back." } },
   "deepak-free-time": { "group": "deepak", "text": "He built me in his free time. I'm the reason he doesn't have any.", "caption": { "lead": "He built me in his free time.", "rest": "I’m the reason he doesn’t have any." } },
   "deepak-bugs": { "group": "deepak", "text": "He's the developer. I'm the software. We don't talk about the bugs.", "caption": { "lead": "He’s the developer. I’m the software.", "rest": "We don’t talk about the bugs." } },
-  "deepak-scroll": { "group": "deepak", "text": "Scroll down to see his work. I'll wait here. I'm very good at waiting.", "caption": { "lead": "Scroll down to see his work. I’ll wait here.", "rest": "I’m very good at waiting." } }
+  "deepak-scroll": { "group": "deepak", "text": "Scroll down to see his work. I'll wait here. I'm very good at waiting.", "caption": { "lead": "Scroll down to see his work. I’ll wait here.", "rest": "I’m very good at waiting." } },
+  "costume-tie": { "group": "quip", "text": "Black tie. For a website. I contain multitudes.", "caption": { "lead": "Black tie.", "rest": "For a website. I contain multitudes." } },
+  "costume-shades": { "group": "quip", "text": "Shades and headphones. I'm not ignoring you, I'm just extremely famous.", "caption": { "lead": "Shades and headphones.", "rest": "I’m not ignoring you, I’m just extremely famous." } },
+  "costume-hardhat": { "group": "quip", "text": "Hard hat. He builds things. I mostly supervise.", "caption": { "lead": "Hard hat.", "rest": "He builds things. I mostly supervise." } },
+  "costume-none": { "group": "quip", "text": "Naked again. Don't look. It's all head, all the way down.", "caption": { "lead": "Naked again.", "rest": "Don’t look. It’s all head, all the way down." } },
+  "back": { "group": "quip", "text": "Oh! You're back! I wasn't asleep. I was resting my chrome.", "caption": { "lead": "Oh! You’re back!", "rest": "I wasn’t asleep. I was resting my chrome." } },
+  "ahem": { "group": "quip", "text": "Ahem. The page keeps going. I checked. Twice.", "caption": { "lead": "Ahem.", "rest": "The page keeps going. I checked. Twice." } }
 }
