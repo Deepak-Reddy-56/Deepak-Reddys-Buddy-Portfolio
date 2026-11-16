@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { buddyLines, type BuddyLine } from '../../content/buddyLines';
-import { seatExpressions, type Line } from '../../content/dialogue';
+import type { BuddyLine } from '../../content/buddyLines';
+import { seatExpressions } from '../../content/dialogue';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { soundEngine } from '../../lib/audio/soundEngine';
@@ -10,6 +10,7 @@ import { buddyVoice } from '../../lib/voice/voice';
 import type { ExpressionName } from '../buddy/expressions';
 import { buddyGeometry } from '../buddy/buddyGeometry';
 import { buddyHost } from '../buddy/buddyHost';
+import { line as buddyLine, pickLine } from '../buddy/buddyScript';
 import { buddySpeech } from '../buddy/buddySpeech';
 import type { MorphBox, PaperBuddyView } from '../buddy/PaperBuddyView';
 import { IntroControls } from './IntroControls';
@@ -33,14 +34,6 @@ const HERO_SLOT = HERO_SEAT + ' [data-buddy-slot]';
 /** Buddy's canvas is the padded mask; his body is this fraction of its width. */
 const BODY_FRACTION = buddyGeometry.body.width / buddyGeometry.width;
 const CANVAS_ASPECT = buddyGeometry.height / buddyGeometry.width;
-
-/** Captions for the spoken lines (lead in ink, rest in grey). */
-const captions: Record<keyof typeof buddyLines, Line> = {
-  hey: { lead: 'Hey, I’m Buddy!' },
-  tall: { lead: 'I’d stand up to say hi,', rest: 'but… this is me standing.' },
-  deepak: { lead: 'This is Deepak.', rest: 'He built me.' },
-  best: { lead: 'He says I’m his best project.', rest: 'I haven’t met the others, so I’m choosing to believe him.' },
-};
 
 function setIntroState(value: 'playing' | 'leaving' | null): void {
   const root = document.documentElement;
@@ -190,6 +183,14 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     return () => window.clearTimeout(timer);
   }, [step, typed, reducedMotion, goTo]);
 
+  // The lines for this visit (jokes are picked fresh, never the last one heard).
+  const [lines] = useState(() => ({
+    hey: buddyLine('hey'),
+    selfJoke: pickLine('self'),
+    deepak: buddyLine('deepak'),
+    deepakJoke: pickLine('deepak'),
+  }));
+
   // One loop for the whole intro: Buddy is the terminal's surface from the start.
   useEffect(() => {
     let swappedAt: number | null = null;
@@ -209,31 +210,33 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
       window.setTimeout(() => finish('done'), 420);
     };
 
-    // D: Buddy's introduction — himself, a joke, then Deepak (profile pops up), another joke.
-    const say = async (line: BuddyLine, id: keyof typeof captions) => {
+    // D: Buddy's introduction — himself and a joke about himself; then Deepak
+    // (the greyed profile pops up as he turns to it) and a joke about Deepak.
+    // The jokes are picked per visit from a pool (see scripts/buddy-lines.json).
+    const say = async (spoken: BuddyLine) => {
       if (finished.current) return;
-      buddySpeech.set(captions[id]);
+      buddySpeech.set(spoken.caption);
       activateHeroLine(); // his caption appears as he starts talking
-      await buddyVoice.playLine(line);
+      await buddyVoice.playLine(spoken);
     };
     const script = async () => {
-      await wait(250);
       expression = 'greeting';
-      await say(buddyLines.hey, 'hey');
+      await say(lines.hey);
       await wait(220);
       expression = 'happy';
-      await say(buddyLines.tall, 'tall');
+      await say(lines.selfJoke);
       if (finished.current) return;
       await wait(300);
-      showProfile(true);
       expression = 'curious';
-      gaze = { x: 0, y: 0.9 }; // he looks up at Deepak's profile
-      await wait(650);
-      await say(buddyLines.deepak, 'deepak');
+      gaze = { x: -0.85, y: 0.7 }; // he turns to Deepak's profile (top-left)
+      await wait(250);
+      showProfile(true);
+      await wait(450);
+      await say(lines.deepak);
       gaze = null;
       expression = 'happy';
       await wait(200);
-      await say(buddyLines.best, 'best');
+      await say(lines.deepakJoke);
       await wait(700);
       finish('done');
     };
@@ -334,14 +337,14 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     });
     loop.start();
     return () => loop.dispose();
-  }, [finish, goTo]);
+  }, [finish, goTo, lines]);
 
   const run = useCallback(() => {
     const current = stepRef.current;
     if (current !== 'typing' && current !== 'ready') return;
     soundEngine.unlock();
     buddyVoice.prime();
-    buddyVoice.preload(Object.values(buddyLines));
+    buddyVoice.preload(Object.values(lines));
     soundEngine.play('enter');
     setTyped(COMMAND.length);
     // Reduced motion: no morph — Buddy is simply in his seat, beside the profile.
@@ -352,7 +355,7 @@ export function IntroSequence({ soundEnabled, soundSupported, onSound, onFinish 
     goTo('running');
     alignTerminalToHeroSlot(windowRef.current);
     runAt.current = performance.now();
-  }, [reducedMotion, finish, goTo]);
+  }, [reducedMotion, finish, goTo, lines]);
 
   // Enter runs from anywhere (buttons keep their own Enter behaviour).
   useEffect(() => {

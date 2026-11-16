@@ -1,12 +1,14 @@
+/* The navbar sits alone at the top centre. */
 .cluster {
   position: fixed;
   z-index: var(--z-controls);
   top: 16px;
-  right: calc(20px + var(--scrollbar-comp));
+  left: calc(50% - var(--scrollbar-comp) / 2);
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   pointer-events: none;
-  transition: top var(--dur-menu-open) var(--ease-out), right var(--dur-menu-open) var(--ease-out);
+  transform: translateX(-50%);
+  transition: top var(--dur-menu-open) var(--ease-out);
 }
 
 .controls {
@@ -25,7 +27,6 @@
 
 .cluster[data-menu='open'] {
   top: 28px;
-  right: calc(28px + var(--scrollbar-comp));
 }
 
 .control {
@@ -104,6 +105,6 @@
 }
 
 @media(max-width:640px) {
-  .cluster { top: 12px; right: calc(12px + var(--scrollbar-comp)); }
-  .cluster[data-menu='open'] { top: 16px; right: calc(16px + var(--scrollbar-comp)); }
+  .cluster { top: 12px; }
+  .cluster[data-menu='open'] { top: 16px; }
 }

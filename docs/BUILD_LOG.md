@@ -473,3 +473,14 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 
 ### Validation
 - Typecheck and build pass. Headless Chrome: terminal 400 px → Buddy 110 px body, page reveal, four lines with captions, profile pop-up, handover at the same position; replay from the About seat (no stale Buddy; terminal drawn by Buddy's surface); skip lands in the hero seat; reduced motion, no WebGL, context loss/restore, menu and Strict Mode dev checked. Voice audio and real-GPU look need the owner's review.
+
+## 2026-11-16 — Joke pools, profile top-left (greyed until introduced), navbar top-centre, voice
+
+### Changes
+- Jokes: `scripts/buddy-lines.json` holds every line and caption — 8 jokes about Buddy and 8 about Deepak. Each visit picks one of each (`buddyScript.pickLine`), never the one that visitor heard last time.
+- Profile at the top-left; the navbar alone at the top centre (tablet/phone: the profile sits below the navbar). During the intro the profile, bio and stats show greyed; when Buddy turns to introduce Deepak they pop to full colour.
+- Buddy looks around for about two seconds after forming, then speaks.
+- Voice: Adam Perlis's write-up says his Buddy used **Speechify** (recorded ahead with word timings, a flat deadpan take, "a bit faster"); it does not confirm the voice name. `scripts/generate-buddy-voice.py` now supports `--provider speechify --voice <id>` (owner's API key; the build sandbox cannot reach api.speechify.ai — the egress proxy returns 403). The shipped audio is regenerated with Kokoro (`am_puck`, rate 1.1) until then.
+
+### Validation
+- Typecheck and build pass. Headless Chrome: full intro with pooled jokes, greyed profile popping on cue, navbar/profile/bio/stats without overlap at 1280, 820 and 390 px; reduced motion, no WebGL, context loss/restore, menu and Strict Mode dev unchanged.

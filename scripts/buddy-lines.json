@@ -1,0 +1,22 @@
+{
+  "hey": { "group": "intro", "text": "Hey, I'm Buddy!", "caption": { "lead": "Hey, I’m Buddy!" } },
+  "deepak": { "group": "deepak-intro", "text": "This is Deepak. He built me.", "caption": { "lead": "This is Deepak.", "rest": "He built me." } },
+
+  "self-standing": { "group": "self", "text": "I'd stand up to say hi, but... this is me standing.", "caption": { "lead": "I’d stand up to say hi,", "rest": "but… this is me standing." } },
+  "self-arms": { "group": "self", "text": "I'd shake your hand, but I'm still waiting on the arms update.", "caption": { "lead": "I’d shake your hand,", "rest": "but I’m still waiting on the arms update." } },
+  "self-terminal": { "group": "self", "text": "I used to be a terminal. Now I'm a terminal with feelings.", "caption": { "lead": "I used to be a terminal.", "rest": "Now I’m a terminal with feelings." } },
+  "self-shiny": { "group": "self", "text": "Yes, I'm shiny. No, you can't see your reflection. I've tried.", "caption": { "lead": "Yes, I’m shiny.", "rest": "No, you can’t see your reflection. I’ve tried." } },
+  "self-math": { "group": "self", "text": "Please don't ask me to do math. I'm mostly decorative.", "caption": { "lead": "Please don’t ask me to do math.", "rest": "I’m mostly decorative." } },
+  "self-screensaver": { "group": "self", "text": "Think of me as a screensaver with ambition.", "caption": { "lead": "Think of me as", "rest": "a screensaver with ambition." } },
+  "self-chrome": { "group": "self", "text": "I'm mostly chrome and confidence. The confidence is doing a lot of the work.", "caption": { "lead": "I’m mostly chrome and confidence.", "rest": "The confidence is doing a lot of the work." } },
+  "self-eyes": { "group": "self", "text": "Small body, big eyes. All the better to watch your cursor.", "caption": { "lead": "Small body, big eyes.", "rest": "All the better to watch your cursor." } },
+
+  "deepak-best": { "group": "deepak", "text": "He says I'm his best project. I haven't met the others, so I'm choosing to believe him.", "caption": { "lead": "He says I’m his best project.", "rest": "I haven’t met the others, so I’m choosing to believe him." } },
+  "deepak-nose": { "group": "deepak", "text": "He gave me eyes and a smile, but no nose. I've stopped asking why.", "caption": { "lead": "He gave me eyes and a smile, but no nose.", "rest": "I’ve stopped asking why." } },
+  "deepak-credit": { "group": "deepak", "text": "He writes the code. I take the credit. It's a good system.", "caption": { "lead": "He writes the code. I take the credit.", "rest": "It’s a good system." } },
+  "deepak-debug": { "group": "deepak", "text": "He spent ages debugging me. I was fine. I think he just liked the company.", "caption": { "lead": "He spent ages debugging me. I was fine.", "rest": "I think he just liked the company." } },
+  "deepak-talks": { "group": "deepak", "text": "Fun fact: I'm the only project of his that talks back.", "caption": { "lead": "Fun fact:", "rest": "I’m the only project of his that talks back." } },
+  "deepak-free-time": { "group": "deepak", "text": "He built me in his free time. I'm the reason he doesn't have any.", "caption": { "lead": "He built me in his free time.", "rest": "I’m the reason he doesn’t have any." } },
+  "deepak-bugs": { "group": "deepak", "text": "He's the developer. I'm the software. We don't talk about the bugs.", "caption": { "lead": "He’s the developer. I’m the software.", "rest": "We don’t talk about the bugs." } },
+  "deepak-scroll": { "group": "deepak", "text": "Scroll down to see his work. I'll wait here. I'm very good at waiting.", "caption": { "lead": "Scroll down to see his work. I’ll wait here.", "rest": "I’m very good at waiting." } }
+}

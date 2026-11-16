@@ -11,23 +11,23 @@
   padding: 150px 0 120px;
 }
 
-/* ── Profile: photo + tag, above Buddy ───────────────────── */
+/* ── Profile: photo + tag, top-left (the navbar has the top centre) ── */
 .profile {
   position: absolute;
-  top: calc(var(--control-top) + var(--control-size) + clamp(28px, 6vh, 64px));
-  left: 50%;
+  top: 14px;
+  left: var(--gutter);
   display: flex;
   align-items: center;
-  gap: 16px;
-  transform: translateX(-50%);
+  gap: 12px;
+  transform-origin: 0 50%;
 }
 
 .photo {
   display: grid;
   overflow: hidden;
   place-items: center;
-  width: 72px;
-  height: 72px;
+  width: 52px;
+  height: 52px;
   flex: none;
   border-radius: 50%;
   background: var(--color-ink);
@@ -47,8 +47,8 @@
 .tag {
   display: flex;
   flex-direction: column;
-  padding: 10px 18px;
-  border-radius: 18px;
+  padding: 8px 16px;
+  border-radius: 16px;
   background: var(--color-surface);
   font-size: var(--text-base);
   line-height: 1.4;
@@ -92,6 +92,13 @@
 .stat dt { color: var(--color-ink-2); }
 .stat dd { color: var(--color-ink); text-align: right; }
 
+/* Tablet widths: keep the profile clear of the centred navbar. */
+@media (max-width: 900px) {
+  .profile {
+    top: calc(var(--control-top) + var(--control-size) + 20px);
+  }
+}
+
 @media (max-width: 760px) {
   .hero {
     display: flex;
@@ -102,9 +109,8 @@
 
   .profile {
     position: static;
-    align-self: center;
-    margin-top: calc(var(--control-top) + var(--control-size) + 32px);
-    transform: none;
+    align-self: flex-start;
+    margin-top: calc(var(--control-top) + var(--control-size) + 24px);
   }
 
   .stage { padding: 56px 0 40px; }
@@ -119,39 +125,45 @@
   .tag { white-space: normal; }
 }
 
-/* ── The pop-up: during the intro the profile waits for Buddy's cue ──
-   (html[data-profile] is set by the intro when Buddy says "This is Deepak").
-   Without the intro (return visits, reduced motion) everything is simply shown. */
+/* ── The pop-up: during the intro the profile waits, greyed, for Buddy's cue ──
+   (html[data-profile] is set when Buddy turns to introduce Deepak). Without the
+   intro (return visits, reduced motion) everything is simply shown. */
 .profile,
 .bio,
 .stats {
   transition:
-    opacity 520ms var(--ease-out),
-    transform 620ms cubic-bezier(0.2, 0.9, 0.3, 1.25);
+    opacity 420ms var(--ease-out),
+    filter 420ms var(--ease-out);
 }
 
-.bio { transition-delay: 160ms; }
-.stats { transition-delay: 260ms; }
-
-:global(html[data-intro]:not([data-profile])) .profile {
-  opacity: 0;
-  transform: translateX(-50%) translateY(14px) scale(0.92);
-}
-
+:global(html[data-intro]:not([data-profile])) .profile,
 :global(html[data-intro]:not([data-profile])) .bio,
 :global(html[data-intro]:not([data-profile])) .stats {
-  opacity: 0;
-  transform: translateY(12px);
+  opacity: 0.32;
+  filter: grayscale(1);
 }
 
-@media (max-width: 760px) {
-  :global(html[data-intro]:not([data-profile])) .profile {
-    transform: translateY(14px) scale(0.92);
-  }
+:global(html[data-profile]) .profile {
+  animation: profile-pop 640ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+:global(html[data-profile]) .bio,
+:global(html[data-profile]) .stats {
+  animation: profile-rise 560ms var(--ease-out) 160ms both;
+}
+
+@keyframes profile-pop {
+  0% { transform: scale(0.9); }
+  55% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes profile-rise {
+  from { transform: translateY(8px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .profile,
   .bio,
-  .stats { transition: none; }
+  .stats { transition: none; animation: none !important; }
 }

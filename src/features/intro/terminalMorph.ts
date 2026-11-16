@@ -15,8 +15,9 @@ export const morph = {
   form: [1850, 2950],
   face: [2950, 3750],
   revealPage: 3450,
-  look: [3900, 5150],
-  done: 5300,
+  /** He looks around for a couple of seconds before he starts talking. */
+  look: [3800, 5900],
+  done: 6000,
 } as const;
 
 /** The longest the terminal may wait (after Run) for the live Buddy before the page just appears. */
