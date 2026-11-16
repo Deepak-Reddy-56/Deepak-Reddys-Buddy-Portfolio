@@ -530,3 +530,8 @@ Reference: the owner's recording of adamperlis.com (clicking Buddy).
   - Real SSML pauses (`<break>`) go after sentences (`--pause`, default 320 ms), with a third of that after commas.
   - Text is escaped for SSML.
   - In-browser beats are reduced to small top-ups (160 ms at sentence ends, 240 ms at "...", none at commas).
+
+## Hard hat matched to Adam's; slower voice defaults
+
+- **Hard hat** redrawn to match the reference: a plain flat-yellow half dome, a thin lip of a brim and a small stalk on top, with no gloss or rib. It tips more as he turns (±14°).
+- **Voice pace** slowed for clarity. Generator defaults are now `--rate 0.9` (intro), `--joke-rate 0.8` (jokes, Deepak lines, quips) and `--pause 420` ms after sentences. Synthetic (not yet recorded) lines also run at a slower, easier pace with longer sentence gaps.

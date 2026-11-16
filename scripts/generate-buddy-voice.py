@@ -14,8 +14,8 @@ Two voices, same output:
       # list voices: curl -H "Authorization: Bearer %SPEECHIFY_API_KEY%" https://api.speechify.ai/v1/voices
       # Pace is set here, at the source (the site plays recordings at 1x — slowing
       # audio in the browser stretches it and makes the voice sound robotic):
-      #   --rate        intro lines ("Hey, I'm Buddy!")      default 1.0
-      #   --joke-rate   jokes, Deepak lines, quips          default 0.88
+      #   --rate        intro lines ("Hey, I'm Buddy!")      default 0.9
+      #   --joke-rate   jokes, Deepak lines, quips          default 0.8
       # Real pauses (SSML <break>) are put after sentences and commas.
 
   Kokoro (open source, Apache-2.0, offline; the default):
@@ -47,9 +47,9 @@ SR = 24000
 parser = argparse.ArgumentParser()
 parser.add_argument('--provider', choices=['kokoro', 'speechify'], default='kokoro')
 parser.add_argument('--voice', default=None, help='kokoro: am_puck (default); speechify: a voice_id from /v1/voices')
-parser.add_argument('--rate', type=float, default=1.0, help='speaking rate for the intro lines')
-parser.add_argument('--joke-rate', type=float, default=0.88, help='speaking rate for jokes, Deepak lines and quips')
-parser.add_argument('--pause', type=int, default=320, help='ms of silence after a sentence (commas get a third)')
+parser.add_argument('--rate', type=float, default=0.9, help='speaking rate for the intro lines')
+parser.add_argument('--joke-rate', type=float, default=0.8, help='speaking rate for jokes, Deepak lines and quips')
+parser.add_argument('--pause', type=int, default=420, help='ms of silence after a sentence (commas get a third)')
 parser.add_argument('--model', default='simba-3.5', help='speechify model id')
 parser.add_argument('--models', default=str(Path(__file__).resolve().parent), help='kokoro model folder')
 parser.add_argument('--only', nargs='*', default=None, help='regenerate only these line ids')

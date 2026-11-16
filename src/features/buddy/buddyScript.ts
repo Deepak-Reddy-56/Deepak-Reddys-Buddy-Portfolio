@@ -50,14 +50,14 @@ export function quipLine(quip: Quip): BuddyLine {
   words.forEach((word, wi) => {
     const letters = word.replace(/[^a-z]/gi, '').length || 1;
     const syllables = Math.max(1, (word.toLowerCase().match(/[aeiouy]+/g) ?? []).length);
-    const frames = Math.round((0.09 + 0.034 * letters) * FPS);
+    const frames = Math.round((0.11 + 0.042 * letters) * FPS); // an unhurried, easy-to-follow pace
     for (let i = 0; i < frames; i++) {
       const x = (i / frames) * syllables;
       env.push(Number((0.35 + 0.65 * Math.abs(Math.sin(Math.PI * x))).toFixed(2)));
     }
     if (wi < words.length - 1) {
-      if (/[.!?…]["”’)]*$/.test(word)) silence(0.14);
-      else if (/[,;:—–]$/.test(word)) silence(0.08);
+      if (/[.!?…]["”’)]*$/.test(word)) silence(0.3);
+      else if (/[,;:—–]$/.test(word)) silence(0.14);
       else env.push(0.12);
     }
   });

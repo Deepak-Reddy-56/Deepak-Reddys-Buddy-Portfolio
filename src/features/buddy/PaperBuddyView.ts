@@ -690,7 +690,8 @@ export class PaperBuddyView implements BuddyView {
     // Looking up, the brim rises at least as far as his eyes do, so it never slides over them.
     const eyeRise = projectOnHead(HEAD.cx, HEAD.cy, yaw, pitch).y - HEAD.cy;
     const topLift = Math.min((crown.y - crownY) * 0.85, eyeRise);
-    const tilt = (Math.sin(yaw) * 9 - 6 * (this.accessory === 'tie' ? 1 : 0)).toFixed(2);
+    // Hats tip with the head as he turns (a 3D hat seen from a turning angle).
+    const tilt = (Math.sin(yaw) * 14 - Math.sin(pitch) * yaw * 6 - 6 * (this.accessory === 'tie' ? 1 : 0)).toFixed(2);
     parts.top.setAttribute(
       'transform',
       `translate(${(topShift).toFixed(2)} ${(topLift - (1 - popIn) * 40).toFixed(2)}) rotate(${tilt} ${HEAD.cx} ${HEAD.cy - HEAD.ry}) translate(${HEAD.cx} ${HEAD.cy - HEAD.ry}) scale(${popIn.toFixed(3)}) translate(${-HEAD.cx} ${-(HEAD.cy - HEAD.ry)})`,

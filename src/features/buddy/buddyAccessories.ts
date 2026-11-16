@@ -87,44 +87,24 @@ export function buildAccessory(name: AccessoryName, head: HeadBox, defs: SVGDefs
   }
 
   if (name === 'hardhat') {
-    // A construction hard hat seen from the front: a rounded dome sitting down
-    // on the head, a brim that wraps round it (dipping at the front), a centre
-    // rib and a little knob — glossy yellow plastic.
+    // Adam-style hard hat: a plain, flat-yellow half dome over the top of the
+    // head, a thin lip of a brim, and a little stalk on top. No gloss, no rib.
     const dome = svg('linearGradient', { id: `hat-${uid}`, x1: 0, y1: 0, x2: 0, y2: 1 });
-    dome.append(
-      svg('stop', { offset: '0', 'stop-color': '#ffe27a' }),
-      svg('stop', { offset: '0.55', 'stop-color': '#f4c935' }),
-      svg('stop', { offset: '1', 'stop-color': '#dfa91a' }),
-    );
-    const brimGrad = svg('linearGradient', { id: `brim-${uid}`, x1: 0, y1: 0, x2: 0, y2: 1 });
-    brimGrad.append(svg('stop', { offset: '0', 'stop-color': '#f2c22c' }), svg('stop', { offset: '1', 'stop-color': '#c9930f' }));
-    defs.append(dome, brimGrad);
-    const brimY = topY + ry * 0.58;
-    const domeTop = topY - ry * 0.16;
-    const dw = rx * 0.9;
-    // Dome: an arch from brim to brim, its bottom edge following the brim's curve.
+    dome.append(svg('stop', { offset: '0', 'stop-color': '#f1cb37' }), svg('stop', { offset: '1', 'stop-color': '#e6bd2b' }));
+    defs.append(dome);
+    const brimY = topY + ry * 0.6;
+    const domeTop = topY - ry * 0.08;
+    const dw = rx * 0.88;
     top.append(
+      // The stalk (behind the dome, so the dome's edge overlaps its foot).
+      svg('rect', { x: cx - 10, y: domeTop - 42, width: 20, height: 54, rx: 4, fill: '#e8be2c' }),
+      // Dome: a half ellipse sitting on the brim.
       svg('path', {
-        d: `M${cx - dw} ${brimY - 8} C${cx - dw} ${domeTop - 6} ${cx + dw} ${domeTop - 6} ${cx + dw} ${brimY - 8} Q${cx} ${brimY + 22} ${cx - dw} ${brimY - 8} Z`,
+        d: `M${cx - dw} ${brimY} A${dw} ${brimY - domeTop} 0 0 1 ${cx + dw} ${brimY} Z`,
         fill: `url(#hat-${uid})`,
       }),
-      // Centre rib.
-      svg('path', {
-        d: `M${cx - 20} ${brimY + 10} C${cx - 22} ${domeTop + 40} ${cx - 16} ${domeTop + 14} ${cx} ${domeTop + 12} C${cx + 16} ${domeTop + 14} ${cx + 22} ${domeTop + 40} ${cx + 20} ${brimY + 10} Z`,
-        fill: '#f8d64e',
-        stroke: 'rgba(180,128,8,0.35)',
-        'stroke-width': 3,
-      }),
-      // Knob on top of the rib.
-      svg('rect', { x: cx - 12, y: domeTop - 4, width: 24, height: 30, rx: 11, fill: '#f6cd3c', stroke: 'rgba(180,128,8,0.35)', 'stroke-width': 3 }),
-      // Gloss.
-      svg('ellipse', { cx: cx - dw * 0.48, cy: domeTop + 46, rx: 38, ry: 16, fill: 'rgba(255,255,255,0.55)', transform: `rotate(-24 ${cx - dw * 0.48} ${domeTop + 46})` }),
-      // Brim: a band wrapping round the head, lower at the front.
-      svg('path', {
-        d: `M${cx - rx * 1.06} ${brimY - 18} Q${cx} ${brimY + 46} ${cx + rx * 1.06} ${brimY - 18} Q${cx + rx * 1.1} ${brimY - 2} ${cx + rx * 0.98} ${brimY + 8} Q${cx} ${brimY + 72} ${cx - rx * 0.98} ${brimY + 8} Q${cx - rx * 1.1} ${brimY - 2} ${cx - rx * 1.06} ${brimY - 18} Z`,
-        fill: `url(#brim-${uid})`,
-      }),
-      svg('path', { d: `M${cx - rx * 0.95} ${brimY - 6} Q${cx} ${brimY + 48} ${cx + rx * 0.95} ${brimY - 6}`, fill: 'none', stroke: 'rgba(255,240,170,0.75)', 'stroke-width': 4, 'stroke-linecap': 'round' }),
+      // Brim: a thin lip, a little wider than the dome.
+      svg('ellipse', { cx, cy: brimY, rx: dw * 1.12, ry: 11, fill: '#e3b726' }),
     );
   }
 
