@@ -28,7 +28,8 @@ export function BuddySeat({ seat, size, line, className }: BuddySeatProps) {
       <span className={styles.slot} data-buddy-slot aria-hidden="true" />
       <figcaption className={styles.caption}>
         <span className="visually-hidden">Buddy says: </span>
-        <TwoTone as="span" lead={line.lead} rest={line.rest} className={styles.line} words />
+        {/* Keyed by text, so a new line (Buddy speaking) reveals word by word again. */}
+        <TwoTone key={line.lead + '|' + (line.rest ?? '')} as="span" lead={line.lead} rest={line.rest} className={styles.line} words />
       </figcaption>
     </figure>
   );

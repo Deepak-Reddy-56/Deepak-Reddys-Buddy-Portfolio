@@ -1,6 +1,7 @@
 import { getShaderColorFromString, ShaderFitOptions, ShaderMount, toProcessedLiquidMetal } from '@paper-design/shaders';
+import { buddyFace as F } from './buddyFace';
 import { buddyGeometry as G } from './buddyGeometry';
-import { buddyMaterial as M } from './buddyMaterial';
+import { buddyLook, buddyMaterial as M, mixLook, terminalLook, type LiquidLook } from './buddyMaterial';
 import { expressions, type ExpressionName, type ExpressionParams } from './expressions';
 import { liquidBuddyFragmentShader } from './liquidBuddyShader';
 import type { BuddyPose, BuddyStatus, BuddyView } from './types';
@@ -27,8 +28,6 @@ const pop = (t: number) => {
 type EyeParts = { group: SVGGElement; shine: SVGGElement; cx: number; cy: number };
 /** A screen-space box Buddy's canvas is stretched over while it is still the terminal. */
 export type MorphBox = { x: number; y: number; w: number; h: number; radius: number };
-/** The small white pupil: the reference's main eye highlight, reduced. */
-const PUPIL_SCALE = 0.62;
 
 /**
  * The one visible Buddy.
@@ -36,7 +35,7 @@ const PUPIL_SCALE = 0.62;
  *   root (fixed, positioned by the director or the intro)
  *     breath (CSS idle breathing; off for reduced motion)
  *       body  — Paper Liquid Metal on the cleaned silhouette mask (one WebGL canvas)
- *       face  — SVG elliptical eyes with a small white pupil, and a smile (no nose)
+ *       face  — SVG elliptical eyes (highlight + glint) and a small smile; no nose
  *
  * Body and face share one coordinate space (the mask's), so the face stays
  * aligned through every move, tilt and scale. The material animates on its
@@ -74,6 +73,8 @@ export class PaperBuddyView implements BuddyView {
   private faceReveal = 1;
   private form = 1;
   private box: MorphBox | null = null;
+  private look: LiquidLook = buddyLook;
+  private concealed = false;
   private pixelBudget = 0;
 
   constructor(root: HTMLElement, options: { reducedMotion: boolean; onStatus: (status: BuddyStatus) => void }) {
@@ -94,13 +95,14 @@ export class PaperBuddyView implements BuddyView {
     this.breath.append(this.body, this.face);
     root.append(this.breath);
 
-    // Eyes: black ellipses (positions/proportions from the reference) with one small white pupil.
-    for (const eye of G.eyes) {
+    // Eyes: black ellipses with a white highlight and a tiny glint (from the approved design).
+    for (const eye of F.eyes) {
       const group = el('g');
       group.append(ellipse(eye.cx, eye.cy, eye.rx, eye.ry, eye.rotate, '#050506'));
       const shine = el('g');
       const h = eye.highlight;
-      shine.append(ellipse(h.cx, h.cy, h.rx * PUPIL_SCALE, h.ry * PUPIL_SCALE, h.rotate, '#ffffff'));
+      const g = eye.glint;
+      shine.append(ellipse(h.cx, h.cy, h.rx, h.ry, h.rotate, '#ffffff'), ellipse(g.cx, g.cy, g.rx, g.ry, g.rotate, '#ffffff'));
       group.append(shine);
       this.face.append(group);
       this.eyes.push({ group, shine, cx: eye.cx, cy: eye.cy });
@@ -108,9 +110,9 @@ export class PaperBuddyView implements BuddyView {
     this.smile = el('path') as SVGPathElement;
     this.smile.setAttribute('fill', 'none');
     this.smile.setAttribute('stroke', '#0c0c0f');
-    this.smile.setAttribute('stroke-width', '6.5');
+    this.smile.setAttribute('stroke-width', String(F.smileWidth));
     this.smile.setAttribute('stroke-linecap', 'round');
-    const [s0, s1, s2] = G.smile;
+    const [s0, s1, s2] = F.smile;
     this.mouth = ellipse(s1[0], (s0[1] + s2[1]) / 2 + 3, 15, 4, 0, '#0c0c0f');
     this.mouth.style.opacity = '0';
     this.face.append(this.smile, this.mouth);
@@ -170,17 +172,18 @@ export class PaperBuddyView implements BuddyView {
         u_image: mask,
         u_colorBack: [0, 0, 0, 0],
         u_colorTint: getShaderColorFromString(M.colorTint),
-        u_contour: M.contour,
-        u_distortion: M.distortion,
-        u_softness: M.softness,
-        u_repetition: M.repetition,
-        u_shiftRed: M.shiftRed,
-        u_shiftBlue: M.shiftBlue,
+        u_contour: this.look.contour,
+        u_distortion: this.look.distortion,
+        u_softness: this.look.softness,
+        u_repetition: this.look.repetition,
+        u_shiftRed: this.look.shiftRed,
+        u_shiftBlue: this.look.shiftBlue,
+        u_liquid: this.look.liquid,
         u_angle: M.angle,
         u_isImage: true,
         u_shape: 0,
         u_form: this.form,
-        u_shade: M.shade,
+        u_shade: this.look.shade,
         u_box: this.box ? [this.box.w, this.box.h] : [BASE_W, BASE_H],
         u_boxRadius: this.box?.radius ?? 0,
         u_fit: ShaderFitOptions.contain,
@@ -307,11 +310,31 @@ export class PaperBuddyView implements BuddyView {
       this.applyTransform();
       this.fitPixelBudget(Math.max(box.w, box.h * (BASE_W / BASE_H)) * (G.body.width / G.width));
     }
+    // The terminal's soft dark chrome becomes Buddy's bright striped silver as he forms.
+    this.look = mixLook(terminalLook, buddyLook, smooth(0, 1, this.form));
     this.mount?.setUniforms({
       u_form: this.form,
       u_box: box ? [box.w, box.h] : [BASE_W, BASE_H],
       u_boxRadius: box?.radius ?? 0,
+      u_repetition: this.look.repetition,
+      u_softness: this.look.softness,
+      u_distortion: this.look.distortion,
+      u_contour: this.look.contour,
+      u_shiftRed: this.look.shiftRed,
+      u_shiftBlue: this.look.shiftBlue,
+      u_shade: this.look.shade,
+      u_liquid: this.look.liquid,
     });
+  }
+
+  /**
+   * Hide Buddy without disturbing him (the intro uses this so the page Buddy can
+   * never sit on top of the terminal, e.g. when the intro is replayed mid-page).
+   */
+  setConcealed(concealed: boolean): void {
+    if (this.concealed === concealed) return;
+    this.concealed = concealed;
+    this.applyTransform();
   }
 
   /** Facial reveal 0→1: eyes, then the pupils, then the smile is drawn. */
@@ -327,16 +350,16 @@ export class PaperBuddyView implements BuddyView {
     this.drawFace();
   }
 
-  /** Advance face easing outside the director (used while the intro owns Buddy). */
-  tickFace(dt: number): void {
-    this.update(dt, this.pose, this.talk);
+  /** Advance face easing (and the speaking mouth) while the intro owns Buddy. */
+  tickFace(dt: number, talk = this.talk): void {
+    this.update(dt, this.pose, talk);
   }
 
   // ── drawing ──────────────────────────────────────────────────
 
   private applyTransform(): void {
     const { x, y, size, opacity, placed } = this.placement;
-    const visible = placed && this.status === 'live';
+    const visible = placed && this.status === 'live' && !this.concealed;
     this.root.style.opacity = visible ? String(opacity) : '0';
     if (!placed) return;
     if (this.box) {
@@ -389,7 +412,7 @@ export class PaperBuddyView implements BuddyView {
     });
 
     // Smile: a quadratic curve through the measured points; width/curve follow the expression.
-    const [p0, p1, p2] = G.smile;
+    const [p0, p1, p2] = F.smile;
     const mx = (p0[0] + p2[0]) / 2 + gx * 0.3;
     const chordY = (p0[1] + p2[1]) / 2 + gy * 0.25;
     const half = ((p2[0] - p0[0]) / 2) * e.mouthWidth;

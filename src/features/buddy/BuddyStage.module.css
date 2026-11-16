@@ -11,9 +11,9 @@
   transition: opacity 260ms var(--ease-in-out);
 }
 
-/* During the introduction Buddy plays on top of the intro's white field. */
+/* During the introduction Buddy sits between the white field and the terminal's text. */
 :global(html[data-intro]) .buddy {
-  z-index: calc(var(--z-intro) + 1);
+  z-index: var(--z-intro);
   transition: none;
 }
 

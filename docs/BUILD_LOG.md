@@ -456,3 +456,20 @@ Frame-exact (manual clock, 30 fps) journeys at 1440/1024/390: 0.0 px landing err
 - Typecheck and build pass. One canvas in every state; no placeholder at load.
 - Intro at 1024 px: canvas box 424 → 244 → 163 → 142 px wide (body 110 px), never a large round shape; director takes over at the same position.
 - Idle: 3 blinks and 2 glances in 12 s. Reduced motion, no WebGL, context loss/restore, skip mid-morph, scroll to About, menu, Strict Mode dev server checked. Owner review on real hardware pending.
+
+## 2026-11-16 — Adam-style terminal, design face, Buddy's introduction with voice
+
+### Owner feedback addressed
+1. Buddy sat frozen on the page during the intro (replay mid-page): the page Buddy is now concealed when any intro starts, and the terminal's chrome surface *is* Buddy from the first frame.
+2. Terminal and Buddy designs: the terminal is now a near-square glossy chrome slab with the Run bar inside it (owner's reference); Buddy's face follows the owner's design (elliptical eyes with highlight + glint, small smile under the eyes, no nose) and his material is bright striped silver.
+3. "Coming from the bottom" after the transition: the director kept its pre-intro journey state and flew from the old seat. It now snaps to the current scroll position when the intro hands over.
+4. Introduction: after the morph Buddy says "Hey, I'm Buddy!" + a joke; the profile pops up (photo/monogram + "I'm Deepak. I'm a software developer.", bio bottom-left, stats bottom-right) and he says "This is Deepak. He built me." + a joke. Captions follow each line.
+
+### Changes
+- Voice: lines generated offline with Kokoro (open source, voice `am_puck`) — `public/buddy/voice/*.mp3`, `src/content/buddyLines.ts`, `scripts/generate-buddy-voice.py`. `buddyVoice.playLine` plays them (sound on) or runs them silently (sound off); a loudness envelope drives the mouth either way.
+- One renderer for terminal and Buddy: the terminal slab is Buddy's Liquid Metal (soft dark "terminal look" blending into the bright "Buddy look" as he forms). `@paper-design/shaders-react` removed; only `@paper-design/shaders` remains.
+- Hero: profile (`src/content/profile.ts`, from confirmed facts; photo slot uses the monogram until a photo is set), `buddySpeech` caption store, resting hero line "This is Deepak. He built me."
+- Intro layering: white field → Buddy → terminal text/controls; Skip stays available while Buddy talks.
+
+### Validation
+- Typecheck and build pass. Headless Chrome: terminal 400 px → Buddy 110 px body, page reveal, four lines with captions, profile pop-up, handover at the same position; replay from the About seat (no stale Buddy; terminal drawn by Buddy's surface); skip lands in the hero seat; reduced motion, no WebGL, context loss/restore, menu and Strict Mode dev checked. Voice audio and real-GPU look need the owner's review.

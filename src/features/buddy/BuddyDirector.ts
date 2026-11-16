@@ -100,12 +100,29 @@ export class BuddyDirector {
     this.resizeObserver = new ResizeObserver(() => this.onResize());
     this.resizeObserver.observe(document.body);
     this.mutationObserver = new MutationObserver(() => {
+      const wasDormant = this.dormant;
       this.dormant = this.introPlaying();
+      // The intro has just handed Buddy over in his seat: continue from there, never
+      // from stale state (e.g. a seat further down the page before a replay).
+      if (wasDormant && !this.dormant) this.snapToScroll();
       this.wake();
     });
     this.mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-intro'] });
     void document.fonts?.ready.then(() => this.onResize());
     this.wake();
+  }
+
+  /** Jump (no flight) to wherever the current scroll position puts Buddy. */
+  private snapToScroll(): void {
+    this.measure();
+    const raw = journeyAt(window.scrollY, this.journey);
+    this.J = Math.abs(raw - Math.round(raw)) < ARRIVE_TOLERANCE ? Math.round(raw) : raw;
+    this.jv = 0;
+    this.menuFlight = null;
+    this.wasMenuOpen = false;
+    this.vel = { x: 0, y: 0 };
+    this.rawVel = { x: 0, y: 0, s: 0 };
+    this.pos = this.journeyPosition(this.J);
   }
 
   setMenuOpen(open: boolean): void {

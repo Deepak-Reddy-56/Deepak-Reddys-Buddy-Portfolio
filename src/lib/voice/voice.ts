@@ -1,3 +1,4 @@
+import type { BuddyLine } from '../../content/buddyLines';
 import { soundEngine } from '../audio/soundEngine';
 
 /**
@@ -136,8 +137,12 @@ class SpeechSynthesisVoiceProvider implements VoiceProvider {
  * Buddy's voice service: provider + "say once" guard + a talk envelope the
  * renderers read every frame to move the mouth.
  */
+type ActiveLine = { line: BuddyLine; startedAt: number; audio: HTMLAudioElement | null; finish: () => void };
+
 class BuddyVoice {
   private provider: VoiceProvider = new SpeechSynthesisVoiceProvider();
+  private active: ActiveLine | null = null;
+  private readonly clips = new Map<string, HTMLAudioElement>();
   private said = new Set<string>();
   private speakingSince = 0;
   private lastWordAt = 0;
@@ -177,17 +182,85 @@ class BuddyVoice {
       });
   }
 
+  /** Fetch line audio ahead of time (call at the start of the intro). */
+  preload(lines: readonly BuddyLine[]): void {
+    for (const line of lines) {
+      if (this.clips.has(line.src)) continue;
+      const audio = new Audio();
+      audio.preload = 'auto';
+      audio.src = line.src;
+      this.clips.set(line.src, audio);
+    }
+  }
+
+  /**
+   * Play one of Buddy's recorded lines. With sound on, the audio plays (it was
+   * unlocked by the visitor's Enter / click); with sound off — or if the browser
+   * refuses playback — the line still runs on its own clock, so the caption and
+   * the mouth stay in step. Resolves when the line has finished (or was cancelled).
+   */
+  playLine(line: BuddyLine): Promise<void> {
+    this.stopLine();
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        window.clearTimeout(timer);
+        if (this.active?.finish === finish) this.active = null;
+        resolve();
+      };
+      const audio = soundEngine.isEnabled ? (this.clips.get(line.src) ?? new Audio(line.src)) : null;
+      const entry: ActiveLine = { line, startedAt: performance.now(), audio, finish };
+      this.active = entry;
+      // Safety net: never wait longer than the line (plus a little).
+      const timer = window.setTimeout(finish, line.duration * 1000 + 400);
+      if (audio) {
+        audio.currentTime = 0;
+        audio.onended = finish;
+        audio.play().then(
+          () => {
+            entry.startedAt = performance.now();
+          },
+          () => {
+            entry.audio = null; // autoplay refused: keep the silent timeline
+          },
+        );
+      }
+    });
+  }
+
+  private stopLine(): void {
+    const current = this.active;
+    if (!current) return;
+    if (current.audio) {
+      current.audio.onended = null;
+      current.audio.pause();
+    }
+    current.finish();
+  }
+
   cancel(): void {
     this.speaking = false;
     this.provider.cancel();
+    this.stopLine();
   }
 
   get isSpeaking(): boolean {
-    return this.speaking;
+    return this.speaking || this.active !== null;
   }
 
   /** Mouth opening 0..1 for the current moment (syllable-ish flutter, accented on word starts). */
   talk(now: number): number {
+    const active = this.active;
+    if (active) {
+      const audio = active.audio;
+      const t = audio && !audio.paused ? audio.currentTime : (now - active.startedAt) / 1000;
+      const env = active.line.envelope;
+      const i = Math.floor(t * 60);
+      if (i < 0 || i >= env.length) return 0;
+      return Math.min(1, env[i] * 1.1);
+    }
     if (!this.speaking) return 0;
     const t = (now - this.speakingSince) / 1000;
     const accent = Math.exp(-(now - this.lastWordAt) / 140);

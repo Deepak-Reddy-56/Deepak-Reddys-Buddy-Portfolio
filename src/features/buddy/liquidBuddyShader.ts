@@ -8,6 +8,7 @@ import { liquidMetalFragmentShader } from '@paper-design/shaders';
  *    on-screen px) flows into Buddy's silhouette. At u_form = 1 the shape is
  *    exactly the processed mask, i.e. Paper's own image-mode path, so the
  *    terminal, the transition and the settled character are one surface;
+ *  - u_liquid: a gentle organic movement of the terminal's outline;
  *  - u_shade: the dark band colour (Paper hard-codes 0.1), lifted so the
  *    chrome reads as bright silver like the reference instead of near-black;
  *  - a reduced small-canvas edge blur, so the small character keeps a crisp outline.
@@ -32,7 +33,8 @@ shader = patch(
 uniform float u_form;
 uniform float u_shade;
 uniform vec2 u_box;
-uniform float u_boxRadius;`,
+uniform float u_boxRadius;
+uniform float u_liquid;`,
 );
 
 // Formation: the terminal's rounded rectangle (in on-screen px) flowing into the
@@ -50,6 +52,8 @@ shader = patch(
     float sRect = clamp(-sd / (.5 * min(u_box.x, u_box.y)), -.6, .6);
     float lt = u_time * .9;
     float wobble = .05 * gather * (1. - gather) * (sin(v_imageUV.x * 9. + lt * 3.1) + sin(v_imageUV.y * 7. - lt * 2.3));
+    // The terminal is liquid too: its outline breathes gently while it waits.
+    wobble += .014 * u_liquid * (1. - gather) * (sin(v_imageUV.x * 6.3 + lt * 1.3) + sin(v_imageUV.y * 5.1 - lt * 1.1));
     float depth = (1. - img.r) * img.g;
     float sBuddy = (img.g - .5) * .3 + depth * .5;
     float s = mix(sRect, sBuddy, gather) + wobble;

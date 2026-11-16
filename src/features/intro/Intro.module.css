@@ -1,6 +1,7 @@
+/* Layers during the intro: white field (below) → Buddy (BuddyStage) → terminal text & controls (above). */
 .overlay {
   position: fixed;
-  z-index: var(--z-intro);
+  z-index: calc(var(--z-intro) + 1);
   inset: 0;
   overflow: hidden;
   outline: none;
@@ -8,7 +9,8 @@
 
 /* The white field the intro plays on; it fades to reveal the homepage. */
 .backdrop {
-  position: absolute;
+  position: fixed;
+  z-index: calc(var(--z-intro) - 1);
   inset: 0;
   background: var(--color-bg);
   transition: opacity 700ms var(--ease-in-out);
@@ -18,8 +20,9 @@
   pointer-events: none;
 }
 
-.overlay[data-step='leaving'] .backdrop {
+.backdrop[data-step='leaving'] {
   opacity: 0;
+  pointer-events: none;
 }
 
 /* ── Bottom controls ───────────────────────────────────────── */
@@ -28,9 +31,14 @@
 }
 
 .overlay[data-step='running'] .controls .sound,
-.overlay[data-step='leaving'] .controls {
+.overlay[data-step='leaving'] .controls .sound {
   opacity: 0;
   pointer-events: none;
+}
+
+/* Skip stays available while Buddy talks. */
+.overlay[data-step='leaving'] .skip {
+  pointer-events: auto;
 }
 
 .sound {
